@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yonerp.po.report.mapper.PoOrderReportMapper">
+
+    <!-- 公共筛选条件：逻辑删除、采购员数据范围、日期区间（统一用 o. 前缀，便于多表 JOIN 时消除歧义） -->
+    <sql id="scopeFilter">
+        o.deleted = 0
+        <if test="buyerId != null">
+            AND o.buyer_id = #{buyerId}
+        </if>
+        <if test="startDate != null">
+            AND o.order_date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null">
+            AND o.order_date &lt;= #{endDate}
+        </if>
+    </sql>
+
+    <select id="selectSummary" resultType="com.yonerp.po.report.dto.ReportSummaryDTO">
+        SELECT COUNT(1)                                                              AS totalCount,
+               IFNULL(SUM(o.total_amount), 0)                                         AS totalAmount,
+               SUM(CASE WHEN o.status = 'DRAFT' THEN 1 ELSE 0 END)                    AS draftCount,
+               SUM(CASE WHEN o.status = 'APPROVING' THEN 1 ELSE 0 END)                AS approvingCount,
+               SUM(CASE WHEN o.status = 'APPROVING' THEN o.total_amount ELSE 0 END)   AS approvingAmount,
+               SUM(CASE WHEN o.status = 'APPROVED' THEN 1 ELSE 0 END)                 AS approvedCount,
+               SUM(CASE WHEN o.status = 'REJECTED' THEN 1 ELSE 0 END)                 AS rejectedCount,
+               SUM(CASE WHEN o.status = 'CANCELED' THEN 1 ELSE 0 END)                 AS canceledCount
+        FROM po_order o
+        <where>
+            <include refid="scopeFilter"/>
+        </where>
+    </select>
+
+    <select id="selectByStatus" resultType="com.yonerp.po.report.dto.ReportStatusDTO">
+        SELECT o.status                     AS status,
+               COUNT(1)                     AS count,
+               IFNULL(SUM(o.total_amount), 0) AS amount
+        FROM po_order o
+        <where>
+            <include refid="scopeFilter"/>
+        </where>
+        GROUP BY o.status
+    </select>
+
+    <select id="selectByTime" resultType="com.yonerp.po.report.dto.ReportTimeDTO">
+        SELECT
+        <choose>
+            <when test="granularity == 'day'">
+                DATE_FORMAT(o.order_date, '%Y-%m-%d')
+            </when>
+            <otherwise>
+                DATE_FORMAT(o.order_date, '%Y-%m')
+            </otherwise>
+        </choose>
+        AS period,
+        COUNT(1)                       AS count,
+        IFNULL(SUM(o.total_amount), 0) AS amount
+        FROM po_order o
+        <where>
+            <include refid="scopeFilter"/>
+        </where>
+        GROUP BY period
+        ORDER BY period
+    </select>
+
+    <!-- 维度排行：supplier / buyer / material / dept，维度切换走 choose 白名单，禁止 ${} 拼接 -->
+    <select id="selectRank" resultType="com.yonerp.po.report.dto.ReportRankDTO">
+        SELECT
+        <choose>
+            <when test="groupBy == 'supplier'">
+                s.id            AS dimId,
+                s.supplier_code AS code,
+                s.supplier_name AS name
+            </when>
+            <when test="groupBy == 'buyer'">
+                u.id        AS dimId,
+                u.username  AS code,
+                u.real_name AS name
+            </when>
+            <when test="groupBy == 'material'">
+                m.id            AS dimId,
+                m.material_code AS code,
+                m.material_name AS name
+            </when>
+            <otherwise>
+                o.dept_id                AS dimId,
+                IFNULL(d.dict_code, '')  AS code,
+                IFNULL(d.dict_name, '未分配部门') AS name
+            </otherwise>
+        </choose>
+        ,
+        <choose>
+            <when test="groupBy == 'material'">
+                COUNT(DISTINCT o.id)         AS orderCount,
+                IFNULL(SUM(i.qty), 0)        AS qty,
+                IFNULL(SUM(i.amount), 0)     AS amount
+            </when>
+            <otherwise>
+                COUNT(DISTINCT o.id)         AS orderCount,
+                IFNULL(SUM(o.total_qty), 0)  AS qty,
+                IFNULL(SUM(o.total_amount), 0) AS amount
+            </otherwise>
+        </choose>
+        FROM po_order o
+        <include refid="rankJoin"/>
+        <where>
+            <include refid="scopeFilter"/>
+            <include refid="rankStatus"/>
+        </where>
+        GROUP BY dimId, code, name
+        ORDER BY amount DESC
+        LIMIT #{topN}
+    </select>
+
+    <!-- 维度 JOIN：与统计口径共用，保证合计与明细一致 -->
+    <sql id="rankJoin">
+        <choose>
+            <when test="groupBy == 'supplier'">
+                JOIN base_supplier s ON s.id = o.supplier_id AND s.deleted = 0
+            </when>
+            <when test="groupBy == 'buyer'">
+                JOIN sys_user u ON u.id = o.buyer_id AND u.deleted = 0
+            </when>
+            <when test="groupBy == 'material'">
+                JOIN po_order_item i ON i.order_id = o.id AND i.deleted = 0
+                JOIN base_material m ON m.id = i.material_id AND m.deleted = 0
+            </when>
+            <otherwise>
+                LEFT JOIN sys_dict d
+                       ON d.dict_type = 'dept'
+                      AND d.dict_code = CAST(o.dept_id AS CHAR)
+                      AND d.deleted = 0
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!-- 状态口径：显式传 status 时按该状态，否则按生效口径（审批中 + 已审批） -->
+    <sql id="rankStatus">
+        <choose>
+            <when test="status != null and status != ''">
+                AND o.status = #{status}
+            </when>
+            <otherwise>
+                AND o.status IN ('APPROVING', 'APPROVED')
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!-- 全口径合计行：不受 TOP N 截断影响，订单数按订单去重（物料维度下一单含多个物料） -->
+    <select id="selectRankTotal" resultType="com.yonerp.po.report.dto.ReportRankDTO">
+        SELECT 0        AS dimId,
+               ''       AS code,
+               ''       AS name,
+               COUNT(DISTINCT o.id) AS orderCount,
+               <choose>
+                   <when test="groupBy == 'material'">
+                       IFNULL(SUM(i.qty), 0)    AS qty,
+                       IFNULL(SUM(i.amount), 0) AS amount
+                   </when>
+                   <otherwise>
+                       IFNULL(SUM(o.total_qty), 0)    AS qty,
+                       IFNULL(SUM(o.total_amount), 0) AS amount
+                   </otherwise>
+               </choose>
+        FROM po_order o
+        <include refid="rankJoin"/>
+        <where>
+            <include refid="scopeFilter"/>
+            <include refid="rankStatus"/>
+        </where>
+    </select>
+</mapper>

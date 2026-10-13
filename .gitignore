@@ -1,0 +1,21 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Maven / Java 编译产物
+backend/target/
+*.class
+
+# Node
+node_modules/
+frontend/dist/
+*.local
+
+# 日志
+*.log
+logs/
+
+# 系统文件
+.DS_Store
+Thumbs.db
