@@ -16,6 +16,10 @@ frontend/dist/
 *.log
 logs/
 
+# AI Agent API Keys（通义千问/智谱，不提交到 Git）
+.env
+*.env.local
+
 # 系统文件
 .DS_Store
 Thumbs.db

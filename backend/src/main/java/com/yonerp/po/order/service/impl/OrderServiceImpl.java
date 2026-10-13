@@ -134,6 +134,7 @@ public class OrderServiceImpl implements OrderService {
             vo.setBuyerId(order.getBuyerId());
             vo.setBuyerName(userNames.get(order.getBuyerId()));
             vo.setOrderDate(order.getOrderDate());
+            vo.setExpectDate(order.getExpectDate());
             vo.setTotalQty(order.getTotalQty());
             vo.setTotalAmount(order.getTotalAmount());
             vo.setStatus(order.getStatus());

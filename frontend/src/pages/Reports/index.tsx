@@ -23,14 +23,24 @@ import {
   Select,
   Space,
   Statistic,
-  Table
+  Table,
+  Tabs,
+  Tag
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { reportApi } from '../../api/reports'
+import { apApi } from '../../api/ap'
+import { paymentApi } from '../../api/payments'
 import { PageCard } from '../../components/PageCard'
 import dayjs from 'dayjs'
-import type { RankGroupBy, RankStat } from '../../types'
+import type {
+  ApSettlementListItem,
+  PaymentListItem,
+  RankGroupBy,
+  RankStat,
+  SupplierBalanceVO
+} from '../../types'
 
 const { RangePicker } = DatePicker
 
@@ -48,7 +58,6 @@ const DIM_LABEL: Record<RankGroupBy, string> = {
   dept: '部门'
 }
 
-/** 维度 → 订单列表查询参数名（穿透联查用） */
 const GROUP_PARAM: Record<RankGroupBy, string> = {
   supplier: 'supplierId',
   buyer: 'buyerId',
@@ -67,7 +76,6 @@ const STATUS_OPTIONS = [
 
 const TOP_OPTIONS = [10, 20, 50]
 
-/** 触发浏览器下载 */
 const download = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -83,10 +91,44 @@ const money = (value: number) =>
 const num = (value: number) =>
   Number(value ?? 0).toLocaleString('zh-CN', { maximumFractionDigits: 3 })
 
+const PAYMENT_STATUS: Record<string, { label: string; color: string }> = {
+  PENDING: { label: '待付款', color: 'orange' },
+  PAID: { label: '已付款', color: 'green' },
+  REJECTED: { label: '已驳回', color: 'red' }
+}
+
+const MATCH_STATUS: Record<string, { label: string; color: string }> = {
+  MATCHED: { label: '已匹配', color: 'green' },
+  PARTIAL: { label: '部分匹配', color: 'orange' },
+  UNMATCHED: { label: '未匹配', color: 'default' }
+}
+
 /**
- * 报表统计：用友式统计表（分组维度可切换 + 合计行 + 占比 + 穿透联查），图表折叠收纳
+ * 报表统计：采购报表 + 应付对账 + 现金日记账
  */
 export function ReportsPage() {
+  const [activeTab, setActiveTab] = useState<'purchase' | 'ap' | 'cash'>('purchase')
+
+  return (
+    <div className="flex flex-col gap-5">
+      <Tabs
+        activeKey={activeTab}
+        onChange={(k) => setActiveTab(k as typeof activeTab)}
+        items={[
+          { key: 'purchase', label: '采购报表' },
+          { key: 'ap', label: '应付对账' },
+          { key: 'cash', label: '现金日记账' }
+        ]}
+      />
+      {activeTab === 'purchase' && <PurchaseReportsPanel />}
+      {activeTab === 'ap' && <ApReconciliationPanel />}
+      {activeTab === 'cash' && <CashJournalPanel />}
+    </div>
+  )
+}
+
+/** 采购报表（原有逻辑） */
+function PurchaseReportsPanel() {
   const { message } = AntdApp.useApp()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -158,30 +200,19 @@ export function ReportsPage() {
   const rows = rank?.rows ?? []
   const total = rank?.total
 
-  /** 穿透联查：跳到订单列表并带上维度与日期条件 */
   const goOrders = (row?: RankStat) => {
     const params = new URLSearchParams()
     if (row) {
       params.set(GROUP_PARAM[groupBy], row.linkValue)
     }
-    if (startDate) {
-      params.set('startDate', startDate)
-    }
-    if (endDate) {
-      params.set('endDate', endDate)
-    }
-    if (status) {
-      params.set('status', status)
-    }
+    if (startDate) params.set('startDate', startDate)
+    if (endDate) params.set('endDate', endDate)
+    if (status) params.set('status', status)
     navigate(`/orders?${params.toString()}`)
   }
 
   const columns: ColumnsType<RankStat> = [
-    {
-      title: '排名',
-      width: 60,
-      render: (_value, _row, index) => index + 1
-    },
+    { title: '排名', width: 60, render: (_v, _r, i) => i + 1 },
     { title: '编码', dataIndex: 'code', width: 120 },
     { title: DIM_LABEL[groupBy], dataIndex: 'name' },
     {
@@ -196,7 +227,7 @@ export function ReportsPage() {
       dataIndex: 'qty',
       width: 120,
       align: 'right',
-      render: (value: number) => num(value),
+      render: (v: number) => num(v),
       sorter: (a, b) => a.qty - b.qty
     },
     {
@@ -205,7 +236,7 @@ export function ReportsPage() {
       width: 150,
       align: 'right',
       className: 'money-text',
-      render: (value: number) => money(value),
+      render: (v: number) => money(v),
       sorter: (a, b) => a.amount - b.amount,
       defaultSortOrder: 'descend'
     },
@@ -213,8 +244,8 @@ export function ReportsPage() {
       title: '金额占比',
       dataIndex: 'percent',
       width: 180,
-      render: (value: number) => (
-        <Progress percent={Number(value ?? 0)} size="small" format={(p) => `${p}%`} />
+      render: (v: number) => (
+        <Progress percent={Number(v ?? 0)} size="small" format={(p) => `${p}%`} />
       ),
       sorter: (a, b) => a.percent - b.percent
     },
@@ -222,7 +253,7 @@ export function ReportsPage() {
       title: '操作',
       width: 90,
       align: 'center',
-      render: (_value, row) => (
+      render: (_v, row) => (
         <Button type="link" size="small" onClick={() => goOrders(row)}>
           联查明细
         </Button>
@@ -252,7 +283,7 @@ export function ReportsPage() {
             <Select
               value={groupBy}
               options={GROUP_OPTIONS}
-              onChange={(value) => setGroupBy(value)}
+              onChange={setGroupBy}
               style={{ width: 140 }}
             />
           </div>
@@ -261,7 +292,7 @@ export function ReportsPage() {
             <Select
               value={status}
               options={STATUS_OPTIONS}
-              onChange={(value) => setStatus(value)}
+              onChange={setStatus}
               style={{ width: 210 }}
             />
           </div>
@@ -270,14 +301,12 @@ export function ReportsPage() {
             <Select
               value={topN}
               options={TOP_OPTIONS.map((n) => ({ value: n, label: `TOP ${n}` }))}
-              onChange={(value) => setTopN(value)}
+              onChange={setTopN}
               style={{ width: 100 }}
             />
           </div>
           <Space>
-            <Button
-              onClick={() => queryClient.invalidateQueries({ queryKey: ['reports'] })}
-            >
+            <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['reports'] })}>
               查询
             </Button>
             <Button
@@ -342,18 +371,10 @@ export function ReportsPage() {
         title={`按${DIM_LABEL[groupBy]}统计（${status ? '指定状态' : '生效口径'}，TOP ${topN}）`}
         extra={
           <Space>
-            <Button
-              size="small"
-              loading={exportRankMutation.isPending}
-              onClick={() => exportRankMutation.mutate()}
-            >
+            <Button size="small" loading={exportRankMutation.isPending} onClick={() => exportRankMutation.mutate()}>
               导出统计表
             </Button>
-            <Button
-              size="small"
-              loading={exportOrdersMutation.isPending}
-              onClick={() => exportOrdersMutation.mutate()}
-            >
+            <Button size="small" loading={exportOrdersMutation.isPending} onClick={() => exportOrdersMutation.mutate()}>
               导出订单明细
             </Button>
             <Button type="link" size="small" onClick={() => goOrders()}>
@@ -457,7 +478,7 @@ export function ReportsPage() {
                         { value: 'month', label: '按月' },
                         { value: 'day', label: '按日' }
                       ]}
-                      onChange={(value) => setGranularity(value)}
+                      onChange={setGranularity}
                       style={{ width: 100 }}
                       size="small"
                     />
@@ -485,6 +506,265 @@ export function ReportsPage() {
           }
         ]}
       />
+    </div>
+  )
+}
+
+/** 应付对账面板：供应商余额 + 三单匹配概览 */
+function ApReconciliationPanel() {
+  const { data: balances = [] } = useQuery({
+    queryKey: ['ap', 'balances'],
+    queryFn: () => apApi.supplierBalances()
+  })
+
+  const { data: settlementPage, isFetching } = useQuery({
+    queryKey: ['ap', 'settlements'],
+    queryFn: () => apApi.settlements({ pageNo: 1, pageSize: 50 })
+  })
+  const settlements = settlementPage?.records ?? []
+
+  const totalUnpaid = balances.reduce((s, b) => s + Number(b.unpaidAmount || 0), 0)
+  const totalPaid = balances.reduce((s, b) => s + Number(b.paidAmount || 0), 0)
+
+  const balanceColumns: ColumnsType<SupplierBalanceVO> = [
+    { title: '供应商', dataIndex: 'supplierName', width: 200 },
+    {
+      title: '未付款金额',
+      dataIndex: 'unpaidAmount',
+      width: 140,
+      align: 'right',
+      render: (v: number) => money(v),
+      className: 'money-text'
+    },
+    {
+      title: '未付款发票数',
+      dataIndex: 'unpaidInvoiceCount',
+      width: 130,
+      align: 'right'
+    },
+    {
+      title: '已付款',
+      dataIndex: 'paidAmount',
+      width: 140,
+      align: 'right',
+      render: (v: number) => money(v)
+    },
+    {
+      title: '应付余额',
+      dataIndex: 'balance',
+      width: 140,
+      align: 'right',
+      render: (v: number) => money(v),
+      className: 'money-text'
+    }
+  ]
+
+  const settlementColumns: ColumnsType<ApSettlementListItem> = [
+    { title: '订单号', dataIndex: 'orderNo', width: 140 },
+    {
+      title: '订单金额',
+      dataIndex: 'orderAmount',
+      width: 120,
+      align: 'right',
+      render: (v: number) => money(v)
+    },
+    {
+      title: '收货金额',
+      dataIndex: 'receiptAmount',
+      width: 120,
+      align: 'right',
+      render: (v: number) => money(v)
+    },
+    {
+      title: '发票金额',
+      dataIndex: 'invoiceAmount',
+      width: 120,
+      align: 'right',
+      render: (v: number) => money(v)
+    },
+    {
+      title: '差异',
+      dataIndex: 'diffAmount',
+      width: 100,
+      align: 'right',
+      render: (v: number) => money(v)
+    },
+    {
+      title: '匹配状态',
+      dataIndex: 'matchStatus',
+      width: 110,
+      render: (v: string) => (
+        <Tag color={MATCH_STATUS[v]?.color}>{MATCH_STATUS[v]?.label ?? v}</Tag>
+      )
+    }
+  ]
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        <AntCard className="shadow-card">
+          <Statistic
+            title="应付总额（未付款）"
+            value={totalUnpaid}
+            precision={2}
+            prefix="¥"
+            valueStyle={{ color: '#FF4D4F' }}
+          />
+        </AntCard>
+        <AntCard className="shadow-card">
+          <Statistic
+            title="已付款合计"
+            value={totalPaid}
+            precision={2}
+            prefix="¥"
+            valueStyle={{ color: '#52C41A' }}
+          />
+        </AntCard>
+        <AntCard className="shadow-card">
+          <Statistic
+            title="匹配记录"
+            value={settlements.length}
+            suffix="条"
+            valueStyle={{ color: '#1677FF' }}
+          />
+        </AntCard>
+      </div>
+
+      <PageCard title="供应商应付余额">
+        <Table<SupplierBalanceVO>
+          rowKey="supplierId"
+          columns={balanceColumns}
+          dataSource={balances}
+          size="middle"
+          pagination={false}
+          scroll={{ x: 800 }}
+        />
+      </PageCard>
+
+      <PageCard title={`三单匹配概览（最近 ${settlements.length} 条）`}>
+        <Table<ApSettlementListItem>
+          rowKey="id"
+          columns={settlementColumns}
+          dataSource={settlements}
+          loading={isFetching}
+          size="middle"
+          pagination={false}
+          scroll={{ x: 800 }}
+        />
+      </PageCard>
+    </div>
+  )
+}
+
+/** 现金日记账面板：付款流水 + 按日汇总 */
+function CashJournalPanel() {
+  const { data: paymentPage, isFetching } = useQuery({
+    queryKey: ['payments', 'cash-journal'],
+    queryFn: () => paymentApi.page({ pageNo: 1, pageSize: 100 })
+  })
+  const payments = paymentPage?.records ?? []
+
+  const totalPaid = payments
+    .filter((p) => p.status === 'PAID')
+    .reduce((s, p) => s + Number(p.paymentAmount || 0), 0)
+
+  const totalPending = payments
+    .filter((p) => p.status === 'PENDING')
+    .reduce((s, p) => s + Number(p.paymentAmount || 0), 0)
+
+  /** 按日期分组统计 */
+  const byDay = payments.reduce<Record<string, number>>((acc, p) => {
+    if (p.status !== 'PAID') return acc
+    const day = p.paymentDate || '未知'
+    acc[day] = (acc[day] || 0) + Number(p.paymentAmount || 0)
+    return acc
+  }, {})
+  const chartData = Object.entries(byDay)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, amount]) => ({ day, amount }))
+
+  const columns: ColumnsType<PaymentListItem> = [
+    { title: '付款单号', dataIndex: 'paymentNo', width: 160 },
+    { title: '发票号', dataIndex: 'invoiceNo', width: 140 },
+    { title: '供应商', dataIndex: 'supplierName', width: 160 },
+    { title: '付款日期', dataIndex: 'paymentDate', width: 110 },
+    {
+      title: '金额',
+      dataIndex: 'paymentAmount',
+      width: 130,
+      align: 'right',
+      render: (v: number) => money(v),
+      className: 'money-text'
+    },
+    { title: '付款方式', dataIndex: 'paymentMethod', width: 100 },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 90,
+      render: (v: string) => (
+        <Tag color={PAYMENT_STATUS[v]?.color}>{PAYMENT_STATUS[v]?.label ?? v}</Tag>
+      )
+    }
+  ]
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        <AntCard className="shadow-card">
+          <Statistic
+            title="已付款合计"
+            value={totalPaid}
+            precision={2}
+            prefix="¥"
+            valueStyle={{ color: '#52C41A' }}
+          />
+        </AntCard>
+        <AntCard className="shadow-card">
+          <Statistic
+            title="待付款合计"
+            value={totalPending}
+            precision={2}
+            prefix="¥"
+            valueStyle={{ color: '#FAAD14' }}
+          />
+        </AntCard>
+        <AntCard className="shadow-card">
+          <Statistic
+            title="付款笔数"
+            value={payments.length}
+            suffix="笔"
+            valueStyle={{ color: '#1677FF' }}
+          />
+        </AntCard>
+      </div>
+
+      <PageCard title="付款流水（最近 100 笔）">
+        <Table<PaymentListItem>
+          rowKey="id"
+          columns={columns}
+          dataSource={payments}
+          loading={isFetching}
+          size="middle"
+          pagination={false}
+          scroll={{ x: 900 }}
+        />
+      </PageCard>
+
+      {chartData.length > 0 && (
+        <PageCard title="按日付款金额">
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(v: number) => money(v)} />
+                <Bar dataKey="amount" name="付款金额" fill="#1677FF" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </PageCard>
+      )}
     </div>
   )
 }

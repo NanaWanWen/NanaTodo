@@ -28,6 +28,8 @@ public class OrderListVO {
 
     private LocalDate orderDate;
 
+    private LocalDate expectDate;
+
     private BigDecimal totalQty;
 
     private BigDecimal totalAmount;

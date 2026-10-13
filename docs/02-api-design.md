@@ -393,3 +393,156 @@
 | `reports/*` | ✅ | — | — | 可选 | **读缓存 5min** |
 | `reports/orders/export` | ✅ | ✅ | — | ✅ | — |
 | `suppliers`/`materials` 写 | ✅ | — | — | — | 清 `po:cache:*` |
+| `receipts`/`invoices`/`payments` 创建 | ✅ | 可选 | — | — | 清对应缓存 |
+| `agent/chat` | ✅ | — | — | — | — |
+| `agent/alerts` | ✅ | — | — | — | 读 `po:alert:list` |
+
+---
+
+## 8. 收货入库 `/api/receipts`
+
+### 8.1 GET `/api/receipts` 分页列表
+
+权限：BUYER / ADMIN ｜ 参数：`orderNo`、`supplierId`、`status`、`pageNo`、`pageSize`
+
+### 8.2 GET `/api/receipts/{id}` 详情（含明细）
+
+### 8.3 POST `/api/receipts` 创建收货单
+
+权限：BUYER / ADMIN ｜ Redis：`INCR po:seq:rcpt:{yyyyMMdd}` 生成单号
+
+```json
+// 请求
+{ "orderId": 1, "receiptDate": "2026-10-15", "remark": "正常收货",
+  "items": [ { "orderItemId": 11, "receivedQty": 50, "unitPrice": 12.5 } ] }
+// 响应 data
+{ "id": 1, "receiptNo": "RCPT202610150001", "status": "DRAFT" }
+```
+
+校验：订单状态须为 `APPROVED` 或 `COMPLETED`；`receivedQty > 0`；支持部分收货（≤ 订单数量）。
+
+### 8.4 POST `/api/receipts/{id}/actions/confirm` 确认收货
+
+状态流转：`DRAFT → CONFIRMED`，确认时自动增加库存（乐观锁 CAS 更新 `po_inventory.quantity`）。
+
+### 8.5 POST `/api/receipts/{id}/actions/cancel` 取消收货
+
+状态流转：`DRAFT → CANCELED`。
+
+---
+
+## 9. 采购发票 `/api/invoices`
+
+### 9.1 GET `/api/invoices` 分页列表
+
+参数：`orderNo`、`invoiceNo`、`invoiceStatus`、`pageNo`、`pageSize`
+
+### 9.2 POST `/api/invoices` 创建发票
+
+```json
+{ "receiptId": 1, "invoiceNo": "INV202610150001", "invoiceDate": "2026-10-15",
+  "totalAmount": 706.25, "taxAmount": 80.55, "remark": "" }
+```
+
+### 9.3 POST `/api/invoices/{id}/actions/check` 标记已核对
+
+`UNCHECKED → CHECKED`
+
+### 9.4 POST `/api/invoices/{id}/actions/uncheck` 撤销核对
+
+`CHECKED → UNCHECKED`（未付款时允许）
+
+---
+
+## 10. 付款单 `/api/payments`
+
+### 10.1 POST `/api/payments` 创建付款单
+
+```json
+{ "invoiceId": 1, "paymentAmount": 786.80, "paymentMethod": "BANK_TRANSFER",
+  "paymentDate": "2026-10-20" }
+```
+
+### 10.2 POST `/api/payments/{id}/actions/confirm` 确认付款
+
+`PENDING → PAID`，订单状态推进至 `COMPLETED`
+
+### 10.3 POST `/api/payments/{id}/actions/reject` 驳回付款
+
+`PENDING → REJECTED`
+
+---
+
+## 11. 应付对账 `/api/ap`
+
+### 11.1 GET `/api/ap/settlements` 三单匹配列表
+
+### 11.2 POST `/api/ap/settlements/{orderId}/match` 手动触发三单匹配
+
+对指定订单执行订单-收货-发票金额校验（1% 容差），结果写入 `po_ap_settlement`。
+
+### 11.3 GET `/api/ap/balances` 供应商应付余额
+
+```json
+[ { "supplierId": 1001, "supplierName": "晨光办公用品",
+    "unpaidAmount": 786.80, "paidAmount": 0.00, "balance": 786.80 } ]
+```
+
+---
+
+## 12. 库存 `/api/inventory`
+
+### 12.1 GET `/api/inventory` 库存列表
+
+### 12.2 GET `/api/inventory/alerts` 低于安全库存预警
+
+### 12.3 PUT `/api/inventory/{materialId}/safety-stock` 更新安全库存
+
+```json
+{ "safetyStock": 100 }
+```
+
+---
+
+## 13. AI Agent `/api/agent`
+
+### 13.1 POST `/api/agent/chat`（SSE 流式）
+
+权限：登录 ｜ Content-Type：`application/json` ｜ Response：`text/event-stream`
+
+```json
+// 请求
+{ "message": "哪些订单逾期了？",
+  "history": [ { "role": "user", "content": "..." }, { "role": "assistant", "content": "..." } ] }
+```
+
+SSE 事件格式：
+
+```
+event: token
+data: {"token": "根"}
+
+event: done
+data: {"full": "完整回复文本", "error": null}
+```
+
+无 API Key 时自动降级为规则模式（关键词匹配 + 工具调用），回复为 JSON 字符串。
+
+### 13.2 GET `/api/agent/alerts` 预警列表
+
+权限：登录 ｜ 返回当前未处理预警（Redis `po:alert:list`，TTL 1 小时）
+
+### 13.3 POST `/api/agent/alerts/{alertId}/handle` 标记已处理
+
+### 13.4 POST `/api/agent/suggest/approval/{orderId}` 辅助审批意见
+
+### 13.5 POST `/api/agent/suggest/invoice-check/{invoiceId}` 发票校验
+
+### 13.6 POST `/api/agent/suggest/payment/{invoiceId}` 付款建议
+
+三个 suggest 接口响应结构：
+
+```json
+{ "type": "APPROVAL", "refId": 1, "suggestion": "价格合理，建议通过",
+  "risk": "LOW", "aiGenerated": true }
+```

@@ -45,4 +45,11 @@ public final class MoneyUtils {
     public static boolean isPositive(BigDecimal value) {
         return value != null && value.compareTo(BigDecimal.ZERO) > 0;
     }
+
+    /**
+     * 判断是否小于 0
+     */
+    public static boolean isNegative(BigDecimal value) {
+        return value != null && value.compareTo(BigDecimal.ZERO) < 0;
+    }
 }

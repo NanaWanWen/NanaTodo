@@ -77,3 +77,19 @@ yonerp:
   session-ttl: 28800
   # 审批超时提醒阈值（小时），仅打标记不自动改状态
   approval-timeout-hours: 48
+  # AI Agent 配置
+  agent:
+    # LLM 提供商：dashscope（通义千问）或 zhipu（智谱）
+    provider: ${AGENT_LLM_PROVIDER:dashscope}
+    # 通义千问 API Key（百炼平台 https://dashscope.aliyun.com）
+    dashscope-api-key: ${DASHSCOPE_API_KEY:}
+    # 通义千问模型
+    dashscope-model: ${DASHSCOPE_MODEL:qwen-max}
+    # 智谱 API Key（https://open.bigmodel.cn）
+    zhipu-api-key: ${ZHIPU_API_KEY:}
+    # 智谱模型
+    zhipu-model: ${ZHIPU_MODEL:glm-4-plus}
+    # LLM 超时（秒）
+    timeout: 60
+    # 预警扫描间隔（分钟）
+    alert-scan-interval-minutes: 5

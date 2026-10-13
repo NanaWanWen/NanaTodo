@@ -39,6 +39,16 @@
 | `/approvals` | 我的待办 | PURCHASE_MANAGER / DIRECTOR | 带角标 |
 | `/base` | 基础数据 | 全部（写需 ADMIN） | Tab：供应商 / 物料 / 用户角色 |
 | `/reports` | 报表统计 | 全部 | |
+| `/receipts` | 收货列表 | BUYER / ADMIN | |
+| `/receipts/:id` | 收货详情 | BUYER / ADMIN | 含明细 + 确认/取消操作 |
+| `/invoices` | 发票列表 | BUYER / ADMIN | |
+| `/invoices/:id` | 发票详情 | BUYER / ADMIN | 含核对/撤销操作 |
+| `/payments` | 付款列表 | BUYER / ADMIN | |
+| `/payments/:id` | 付款详情 | BUYER / ADMIN | 含确认/驳回操作 |
+| `/stock` | 库存管理 | BUYER / ADMIN | 含预警高亮 + 安全库存编辑 |
+| `/ap-settlements` | 应付对账 | BUYER / ADMIN | 三单匹配列表 |
+| `/agent-chat` | AI 对话 | 全部 | SSE 流式，支持规则模式表格渲染 |
+| `/agent-alerts` | AI 预警 | 全部 | 30 秒轮询，支持标记已处理 |
 | `403` | 无权限页 | 全部 | |
 | `*` | 404 | 全部 | |
 
@@ -97,11 +107,34 @@ src/
     │   ├── SupplierPanel.tsx
     │   ├── MaterialPanel.tsx
     │   └── UserRolePanel.tsx
-    └── Reports/
-        ├── index.tsx
-        ├── SummaryCards.tsx     统计卡
-        ├── StatusPieChart.tsx   recharts 饼图
-        └── TimeBarChart.tsx     recharts 柱状图 + 粒度切换
+    ├── Reports/
+    │   ├── index.tsx
+    │   ├── SummaryCards.tsx     统计卡
+    │   ├── StatusPieChart.tsx   recharts 饼图
+    │   └── TimeBarChart.tsx     recharts 柱状图 + 粒度切换
+    ├── ReceiptList/
+    │   ├── index.tsx
+    │   └── ReceiptCreate.tsx    新建收货单抽屉
+    ├── ReceiptDetail/
+    │   └── index.tsx            详情 + 确认/取消操作
+    ├── InvoiceList/
+    │   ├── index.tsx
+    │   └── InvoiceCreate.tsx
+    ├── InvoiceDetail/
+    │   └── index.tsx
+    ├── PaymentList/
+    │   ├── index.tsx
+    │   └── PaymentCreate.tsx
+    ├── PaymentDetail/
+    │   └── index.tsx
+    ├── StockList/
+    │   └── index.tsx            库存表格 + 预警高亮 + 安全库存编辑
+    ├── ApSettlementList/
+    │   └── index.tsx            三单匹配列表
+    ├── AgentChat/
+    │   └── index.tsx            SSE 流式聊天面板（规则模式自动渲染表格）
+    └── AgentAlerts/
+        └── index.tsx            预警列表（30s 轮询 + 标记已处理）
 ```
 
 ## 4. 状态管理

@@ -9,6 +9,13 @@ import { ApprovalsPage } from './pages/Approvals'
 import { BaseDataPage } from './pages/BaseData'
 import { ReportsPage } from './pages/Reports'
 import { ForbiddenPage } from './pages/Forbidden'
+import { ReceiptListPage } from './pages/ReceiptList'
+import { InvoiceListPage } from './pages/InvoiceList'
+import { PaymentListPage } from './pages/PaymentList'
+import { StockListPage } from './pages/StockList'
+import { ApSettlementListPage } from './pages/ApSettlementList'
+import { AgentChatPage } from './pages/AgentChat'
+import { AgentAlertsPage } from './pages/AgentAlerts'
 
 export default function App() {
   return (
@@ -53,6 +60,48 @@ export default function App() {
           />
           <Route path="base" element={<BaseDataPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route
+            path="receipts"
+            element={
+              <RoleGuard roles={['BUYER', 'ADMIN']}>
+                <ReceiptListPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="invoices"
+            element={
+              <RoleGuard roles={['BUYER', 'ADMIN']}>
+                <InvoiceListPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="payments"
+            element={
+              <RoleGuard roles={['BUYER', 'ADMIN']}>
+                <PaymentListPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="inventory"
+            element={
+              <RoleGuard roles={['BUYER', 'ADMIN']}>
+                <StockListPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="ap-settlements"
+            element={
+              <RoleGuard roles={['BUYER', 'ADMIN']}>
+                <ApSettlementListPage />
+              </RoleGuard>
+            }
+          />
+          <Route path="agent-chat" element={<AgentChatPage />} />
+          <Route path="agent-alerts" element={<AgentAlertsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/orders" replace />} />

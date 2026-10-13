@@ -2,7 +2,19 @@ import { useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Dropdown, Layout, Menu, Typography } from 'antd'
 import type { MenuProps } from 'antd'
-import { FileTextOutlined, CheckSquareOutlined, DatabaseOutlined, BarChartOutlined } from '@ant-design/icons'
+import {
+  FileTextOutlined,
+  CheckSquareOutlined,
+  DatabaseOutlined,
+  BarChartOutlined,
+  InboxOutlined,
+  FileProtectOutlined,
+  PayCircleOutlined,
+  SafetyOutlined,
+  AuditOutlined,
+  RobotOutlined,
+  AlertOutlined
+} from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import { approvalApi } from '../api/approvals'
 import { authApi } from '../api/auth'
@@ -29,6 +41,7 @@ export function MainLayout() {
   const { realName, username, roles, currentRole, userId, setRole, clear } = useAuthStore()
 
   const isApprover = currentRole === 'PURCHASE_MANAGER' || currentRole === 'DIRECTOR'
+  const isBuyerOrAdmin = currentRole === 'BUYER' || currentRole === 'ADMIN'
 
   const { data: todoCount = 0 } = useQuery({
     queryKey: ['todo-count', currentRole],
@@ -52,10 +65,29 @@ export function MainLayout() {
         )
       })
     }
+    if (isBuyerOrAdmin) {
+      items.push(
+        { key: '/receipts', icon: <InboxOutlined />, label: '收货入库' },
+        { key: '/invoices', icon: <FileProtectOutlined />, label: '采购发票' },
+        { key: '/payments', icon: <PayCircleOutlined />, label: '付款单' },
+        { key: '/inventory', icon: <SafetyOutlined />, label: '库存管理' },
+        { key: '/ap-settlements', icon: <AuditOutlined />, label: '应付对账' }
+      )
+    }
+    // AI Agent 入口（所有角色可用：只读报表 + 预警）
+    items.push({
+      type: 'group',
+      label: 'AI Agent',
+      key: 'agent-group',
+      children: [
+        { key: '/agent-chat', icon: <RobotOutlined />, label: '智能对话' },
+        { key: '/agent-alerts', icon: <AlertOutlined />, label: '预警中心' }
+      ]
+    })
     items.push({ key: '/base', icon: <DatabaseOutlined />, label: '基础数据' })
     items.push({ key: '/reports', icon: <BarChartOutlined />, label: '报表统计' })
     return items
-  }, [isApprover, todoCount])
+  }, [isApprover, isBuyerOrAdmin, todoCount])
 
   const selectedKey = '/' + (location.pathname.split('/')[1] ?? '')
 

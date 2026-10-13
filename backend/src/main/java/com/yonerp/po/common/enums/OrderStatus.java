@@ -19,7 +19,9 @@ public enum OrderStatus {
     /** 已驳回：可修改后重新提交 */
     REJECTED("REJECTED", "已驳回"),
     /** 已取消：终态 */
-    CANCELED("CANCELED", "已取消");
+    CANCELED("CANCELED", "已取消"),
+    /** 已完成：已付款终态 */
+    COMPLETED("COMPLETED", "已完成");
 
     private final String code;
 

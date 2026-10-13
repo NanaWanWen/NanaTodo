@@ -189,3 +189,150 @@ CREATE TABLE IF NOT EXISTS po_approval_log (
   KEY idx_operator (operator_id),
   KEY idx_operate_time (operate_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='审批流水表';
+
+-- ---------------- 采购 P2P 全流程业务表 ----------------
+-- 6 张新表统一规范：主键 id、审计字段、逻辑删除、金额 DECIMAL(18,2)、状态 VARCHAR(20)
+
+-- 收货单主表
+CREATE TABLE IF NOT EXISTS po_receipt (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  receipt_no    VARCHAR(32)     NOT NULL COMMENT '收货单编号 RCPTyyyyMMddNNNN',
+  order_id      BIGINT UNSIGNED NOT NULL COMMENT '订单ID',
+  supplier_id   BIGINT UNSIGNED NOT NULL COMMENT '供应商ID(冗余)',
+  receipt_date  DATE            NOT NULL COMMENT '收货日期',
+  total_qty     DECIMAL(18,3)   NOT NULL DEFAULT 0 COMMENT '实收数量合计',
+  total_amount  DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '含税金额合计',
+  status        VARCHAR(20)     NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT/CONFIRMED/CANCELED',
+  remark        VARCHAR(500)    DEFAULT NULL COMMENT '备注',
+  create_by     BIGINT UNSIGNED DEFAULT NULL,
+  create_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_by     BIGINT UNSIGNED DEFAULT NULL,
+  update_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted       TINYINT         NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_receipt_no (receipt_no),
+  KEY idx_order (order_id),
+  KEY idx_supplier (supplier_id),
+  KEY idx_status (status),
+  KEY idx_receipt_date (receipt_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购收货单主表';
+
+-- 收货单明细
+CREATE TABLE IF NOT EXISTS po_receipt_item (
+  id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  receipt_id     BIGINT UNSIGNED NOT NULL COMMENT '收货单ID',
+  order_item_id  BIGINT UNSIGNED NOT NULL COMMENT '订单明细ID',
+  material_id    BIGINT UNSIGNED NOT NULL COMMENT '物料ID',
+  material_name  VARCHAR(128)    NOT NULL COMMENT '物料名称(冗余快照)',
+  spec           VARCHAR(128)    DEFAULT NULL COMMENT '规格(冗余)',
+  unit           VARCHAR(16)     NOT NULL COMMENT '单位(冗余)',
+  ordered_qty    DECIMAL(18,3)   NOT NULL COMMENT '订购数量',
+  received_qty   DECIMAL(18,3)   NOT NULL COMMENT '实收数量',
+  unit_price     DECIMAL(18,4)   NOT NULL COMMENT '不含税单价(冗余快照)',
+  tax_rate       DECIMAL(5,2)    NOT NULL DEFAULT 13.00 COMMENT '税率(%)',
+  tax_amount     DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '税额',
+  amount         DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '含税金额',
+  remark         VARCHAR(255)    DEFAULT NULL,
+  create_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted        TINYINT         NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  KEY idx_receipt (receipt_id),
+  KEY idx_order_item (order_item_id),
+  KEY idx_material (material_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购收货单明细表';
+
+-- 采购发票
+CREATE TABLE IF NOT EXISTS po_invoice (
+  id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  invoice_no     VARCHAR(32)     NOT NULL COMMENT '发票编号 INVyyyyMMddNNNN',
+  receipt_id     BIGINT UNSIGNED NOT NULL COMMENT '收货单ID',
+  order_id       BIGINT UNSIGNED NOT NULL COMMENT '订单ID(冗余)',
+  supplier_id    BIGINT UNSIGNED NOT NULL COMMENT '供应商ID(冗余)',
+  invoice_date   DATE            NOT NULL COMMENT '开票日期',
+  invoice_amount DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '发票金额(不含税)',
+  tax_amount     DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '税额',
+  total_amount   DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '价税合计',
+  invoice_status VARCHAR(20)     NOT NULL DEFAULT 'UNCHECKED' COMMENT 'UNCHECKED/CHECKED/PAID',
+  remark         VARCHAR(500)    DEFAULT NULL COMMENT '备注',
+  create_by      BIGINT UNSIGNED DEFAULT NULL,
+  create_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_by      BIGINT UNSIGNED DEFAULT NULL,
+  update_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted        TINYINT         NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_invoice_no (invoice_no),
+  KEY idx_receipt (receipt_id),
+  KEY idx_order (order_id),
+  KEY idx_supplier (supplier_id),
+  KEY idx_status (invoice_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购发票表';
+
+-- 付款单
+CREATE TABLE IF NOT EXISTS po_payment (
+  id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  payment_no     VARCHAR(32)     NOT NULL COMMENT '付款单编号 PAYyyyyMMddNNNN',
+  invoice_id     BIGINT UNSIGNED NOT NULL COMMENT '发票ID',
+  order_id       BIGINT UNSIGNED NOT NULL COMMENT '订单ID(冗余)',
+  supplier_id    BIGINT UNSIGNED NOT NULL COMMENT '供应商ID(冗余)',
+  payment_date   DATE            NOT NULL COMMENT '付款日期',
+  payment_amount DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '付款金额',
+  payment_method VARCHAR(20)     NOT NULL DEFAULT 'BANK_TRANSFER' COMMENT 'BANK_TRANSFER/ALIPAY/WECHAT/CASH',
+  status         VARCHAR(20)     NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/PAID/REJECTED',
+  remark         VARCHAR(500)    DEFAULT NULL COMMENT '备注',
+  create_by      BIGINT UNSIGNED DEFAULT NULL,
+  create_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_by      BIGINT UNSIGNED DEFAULT NULL,
+  update_time    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted        TINYINT         NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_payment_no (payment_no),
+  KEY idx_invoice (invoice_id),
+  KEY idx_order (order_id),
+  KEY idx_supplier (supplier_id),
+  KEY idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='付款单表';
+
+-- 应付对账/三单匹配
+CREATE TABLE IF NOT EXISTS po_ap_settlement (
+  id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id      BIGINT UNSIGNED NOT NULL COMMENT '订单ID',
+  receipt_id    BIGINT UNSIGNED NOT NULL COMMENT '收货单ID',
+  invoice_id    BIGINT UNSIGNED NOT NULL COMMENT '发票ID',
+  order_amount  DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '订单金额',
+  receipt_amount DECIMAL(18,2)  NOT NULL DEFAULT 0 COMMENT '收货金额',
+  invoice_amount DECIMAL(18,2)  NOT NULL DEFAULT 0 COMMENT '发票金额',
+  diff_amount   DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '差异金额(发票-收货)',
+  match_status  VARCHAR(20)     NOT NULL DEFAULT 'UNMATCHED' COMMENT 'UNMATCHED/MATCHED/PARTIAL',
+  tolerance     DECIMAL(18,2)   NOT NULL DEFAULT 0 COMMENT '容差金额',
+  remark        VARCHAR(500)    DEFAULT NULL COMMENT '备注',
+  create_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted       TINYINT         NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_order (order_id),
+  KEY idx_invoice (invoice_id),
+  KEY idx_match_status (match_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='应付对账/三单匹配表';
+
+-- 库存
+CREATE TABLE IF NOT EXISTS po_inventory (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  material_id     BIGINT UNSIGNED NOT NULL COMMENT '物料ID',
+  material_code   VARCHAR(32)     NOT NULL COMMENT '物料编码(冗余)',
+  material_name   VARCHAR(128)    NOT NULL COMMENT '物料名称(冗余)',
+  warehouse       VARCHAR(64)     NOT NULL DEFAULT '主仓库' COMMENT '仓库',
+  quantity        DECIMAL(18,3)   NOT NULL DEFAULT 0 COMMENT '当前库存',
+  safety_stock    DECIMAL(18,3)   NOT NULL DEFAULT 0 COMMENT '安全库存',
+  last_update_time DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
+  version         INT             NOT NULL DEFAULT 0 COMMENT '乐观锁',
+  create_by       BIGINT UNSIGNED DEFAULT NULL,
+  create_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_by       BIGINT UNSIGNED DEFAULT NULL,
+  update_time     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted         TINYINT         NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_material_warehouse (material_id, warehouse),
+  KEY idx_material (material_id),
+  KEY idx_quantity (quantity)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存表';

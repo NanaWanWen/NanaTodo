@@ -90,6 +90,13 @@ public final class RedisKeys {
         return SEQ + "order:" + date;
     }
 
+    /**
+     * 通用单号序列（收货 RCPT / 发票 INV / 付款 PAY）
+     */
+    public static String sequence(String prefix, String date) {
+        return SEQ + prefix.toLowerCase() + ":" + date;
+    }
+
     // ---------------- 幂等 ----------------
     public static String idem(String key) {
         return IDEM + key;
@@ -112,5 +119,16 @@ public final class RedisKeys {
     // ---------------- 超时提醒 ----------------
     public static String timeoutZset() {
         return ROOT + "timeout:zset";
+    }
+
+    // ---------------- AI Agent 预警 ----------------
+    public static final String ALERT = ROOT + "alert:";
+
+    public static String alertList() {
+        return ALERT + "list";
+    }
+
+    public static String alertItem(String alertId) {
+        return ALERT + "item:" + alertId;
     }
 }

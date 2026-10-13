@@ -234,3 +234,178 @@ export interface RankResult {
   }
   dataTime: string
 }
+
+// ===== P2P 全流程类型 =====
+
+/** 收货单列表项 */
+export interface ReceiptListItem {
+  id: number
+  receiptNo: string
+  orderId: number
+  orderNo: string
+  supplierId: number
+  supplierName: string
+  receiptDate: string
+  totalQty: number
+  totalAmount: number
+  status: 'DRAFT' | 'CONFIRMED' | 'CANCELED'
+  createTime: string
+}
+
+/** 收货单详情 */
+export interface ReceiptDetail {
+  id: number
+  receiptNo: string
+  orderId: number
+  orderNo: string
+  supplierId: number
+  supplierName: string
+  receiptDate: string
+  totalQty: number
+  totalAmount: number
+  status: string
+  remark?: string
+  createTime: string
+  items: ReceiptDetailItem[]
+}
+
+export interface ReceiptDetailItem {
+  id: number
+  orderItemId: number
+  materialId: number
+  materialName: string
+  spec?: string
+  unit: string
+  orderedQty: number
+  receivedQty: number
+  unitPrice: number
+  taxRate: number
+  taxAmount: number
+  amount: number
+  remark?: string
+}
+
+/** 收货单创建 */
+export interface ReceiptCreatePayload {
+  orderId: number
+  receiptDate?: string
+  remark?: string
+  items: { orderItemId: number; receivedQty: number; remark?: string }[]
+}
+
+/** 发票列表项 */
+export interface InvoiceListItem {
+  id: number
+  invoiceNo: string
+  receiptId: number
+  orderId: number
+  orderNo: string
+  supplierId: number
+  supplierName: string
+  invoiceDate: string
+  invoiceAmount: number
+  taxAmount: number
+  totalAmount: number
+  invoiceStatus: 'UNCHECKED' | 'CHECKED' | 'PAID'
+  createTime: string
+}
+
+/** 发票创建 */
+export interface InvoiceCreatePayload {
+  receiptId: number
+  invoiceDate?: string
+  remark?: string
+}
+
+/** 付款单列表项 */
+export interface PaymentListItem {
+  id: number
+  paymentNo: string
+  invoiceId: number
+  invoiceNo: string
+  orderId: number
+  orderNo: string
+  supplierId: number
+  supplierName: string
+  paymentDate: string
+  paymentAmount: number
+  paymentMethod: string
+  status: 'PENDING' | 'PAID' | 'REJECTED'
+  createTime: string
+}
+
+/** 付款单创建 */
+export interface PaymentCreatePayload {
+  invoiceId: number
+  paymentAmount?: number
+  paymentDate?: string
+  paymentMethod?: string
+  remark?: string
+}
+
+/** 库存项 */
+export interface InventoryItem {
+  id: number
+  materialId: number
+  materialCode: string
+  materialName: string
+  warehouse: string
+  quantity: number
+  safetyStock: number
+  lastUpdateTime: string
+  version: number
+}
+
+/** 应付对账列表项 */
+export interface ApSettlementListItem {
+  id: number
+  orderId: number
+  orderNo: string
+  receiptId: number
+  receiptNo: string
+  invoiceId: number
+  invoiceNo: string
+  orderAmount: number
+  receiptAmount: number
+  invoiceAmount: number
+  diffAmount: number
+  matchStatus: 'UNMATCHED' | 'MATCHED' | 'PARTIAL'
+  tolerance: number
+  remark?: string
+  updateTime: string
+}
+
+/** 供应商应付余额 */
+export interface SupplierBalanceVO {
+  supplierId: number
+  supplierName: string
+  unpaidAmount: number
+  unpaidInvoiceCount: number
+  paidAmount: number
+  balance: number
+}
+
+// ---------------- AI Agent ----------------
+
+/** Agent 预警 */
+export interface AgentAlertVO {
+  alertId: string
+  alertType: string
+  level: 'INFO' | 'WARNING' | 'CRITICAL'
+  title: string
+  content: string
+  refId: number
+  refNo: string
+  createTime: string
+  handled: boolean
+}
+
+/** AI 建议（辅助审批/发票校验/付款） */
+export interface SuggestionVO {
+  type: 'APPROVAL' | 'INVOICE_CHECK' | 'PAYMENT'
+  refId: number
+  refNo?: string
+  suggestion: string
+  risk: 'LOW' | 'MEDIUM' | 'HIGH'
+  aiGenerated: boolean
+}
