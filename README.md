@@ -37,4 +37,4 @@ mvn spring-boot:run
 cd frontend
 npm install
 npm run dev
-<img width="2880" height="1474" alt="image" src="https://github.com/user-attachments/assets/1db9c204-2a96-45ff-9a26-d4ac8cdd7f62" />
+
