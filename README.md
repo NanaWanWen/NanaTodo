@@ -2,6 +2,9 @@
 
 > 模拟企业级 ERP 采购流程的前后端分离练习项目，为学习用友 BIP / YonBIP 打基础。
 
+<img width="2864" height="1536" alt="image" src="https://github.com/user-attachments/assets/8606c413-8d90-4156-8b8c-46fcdf117d60" />
+
+
 ## ✨ 功能特性
 
 - 采购订单主从 CRUD
@@ -38,4 +41,4 @@ cd frontend
 npm install
 npm run dev
 
-## 🚀 快速开始
+
