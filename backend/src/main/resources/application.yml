@@ -93,3 +93,24 @@ yonerp:
     timeout: 60
     # 预警扫描间隔（分钟）
     alert-scan-interval-minutes: 5
+  # T+ Cloud 只读同步配置，默认关闭
+  tplus:
+    enabled: ${TPLUS_ENABLED:false}
+    dry-run: ${TPLUS_DRY_RUN:true}
+    enterprise-id: ${TPLUS_ENTERPRISE_ID:1243333710211666}
+    account-id: ${TPLUS_ACCOUNT_ID:}
+    app-key: ${TPLUS_APP_KEY:}
+    app-secret: ${TPLUS_APP_SECRET:}
+    open-token: ${TPLUS_OPEN_TOKEN:}
+    token-url: ${TPLUS_TOKEN_URL:}
+    base-url: ${TPLUS_BASE_URL:https://openapi.chanjet.com}
+    supplier-path: ${TPLUS_SUPPLIER_PATH:/tplus/api/v2/partner/QueryPage}
+    material-path: ${TPLUS_MATERIAL_PATH:}
+    purchase-order-path: ${TPLUS_PURCHASE_ORDER_PATH:}
+    inventory-path: ${TPLUS_INVENTORY_PATH:}
+    page-size: ${TPLUS_PAGE_SIZE:100}
+    connect-timeout-seconds: ${TPLUS_CONNECT_TIMEOUT_SECONDS:10}
+    read-timeout-seconds: ${TPLUS_READ_TIMEOUT_SECONDS:30}
+    max-retries: ${TPLUS_MAX_RETRIES:2}
+    sync-interval-minutes: ${TPLUS_SYNC_INTERVAL_MINUTES:10}
+    sync-interval: ${TPLUS_SYNC_INTERVAL:PT10M}
