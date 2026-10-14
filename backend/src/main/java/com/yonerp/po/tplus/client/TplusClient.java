@@ -22,6 +22,7 @@ public class TplusClient {
 
     private final TplusProperties properties;
     private final ObjectMapper objectMapper;
+    private final TplusAuthClient authClient;
 
     public JsonNode querySuppliers(int pageIndex) {
         return queryPage(properties.getSupplierPath(), pageIndex);
@@ -42,13 +43,13 @@ public class TplusClient {
     public boolean isConfigured() {
         return properties.isEnabled()
                 && properties.hasCredentials()
-                && properties.hasOpenToken()
+                && !properties.getAccountId().isBlank()
                 && !properties.getBaseUrl().isBlank();
     }
 
     private JsonNode queryPage(String path, int pageIndex) {
         if (!isConfigured()) {
-            throw new IllegalStateException("T+ 同步未配置完成：需要 TPLUS_ENABLED、appKey、appSecret、openToken 和 baseUrl");
+            throw new IllegalStateException("T+ 同步未配置完成：需要 TPLUS_ENABLED、appKey、appSecret、accountId 和 baseUrl");
         }
         if (path == null || path.isBlank()) {
             throw new IllegalStateException("T+ 查询接口路径未配置");
@@ -77,7 +78,7 @@ public class TplusClient {
                         .contentType(MediaType.APPLICATION_JSON)
                         .header("appKey", properties.getAppKey())
                         .header("appSecret", properties.getAppSecret())
-                        .header("openToken", properties.getOpenToken())
+                        .header("openToken", authClient.getOpenToken())
                         .body(body)
                         .retrieve()
                         .body(JsonNode.class);

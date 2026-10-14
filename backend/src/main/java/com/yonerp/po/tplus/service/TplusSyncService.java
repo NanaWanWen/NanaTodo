@@ -1,6 +1,7 @@
 package com.yonerp.po.tplus.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.yonerp.po.tplus.client.TplusAuthClient;
 import com.yonerp.po.tplus.client.TplusClient;
 import com.yonerp.po.tplus.config.TplusProperties;
 import lombok.RequiredArgsConstructor;
@@ -18,17 +19,28 @@ public class TplusSyncService {
 
     private final TplusProperties properties;
     private final TplusClient client;
+    private final TplusAuthClient authClient;
 
     public Map<String, Object> preview() {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("enabled", properties.isEnabled());
         result.put("dryRun", properties.isDryRun());
-        result.put("enterpriseId", properties.getEnterpriseId());
+        result.put("accountId", properties.getAccountId());
         result.put("configured", client.isConfigured());
         result.put("readOnly", true);
 
         if (!client.isConfigured()) {
             result.put("message", "T+ 同步默认关闭或凭证未配置；未发起外部请求");
+            return result;
+        }
+
+        try {
+            authClient.getOpenToken();
+            result.put("tokenAcquired", true);
+        } catch (Exception ex) {
+            result.put("tokenAcquired", false);
+            result.put("tokenError", ex.getMessage());
+            result.put("message", "T+ Token 获取失败，未发起业务查询；本地数据未改变");
             return result;
         }
 

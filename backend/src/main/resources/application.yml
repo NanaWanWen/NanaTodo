@@ -97,12 +97,10 @@ yonerp:
   tplus:
     enabled: ${TPLUS_ENABLED:false}
     dry-run: ${TPLUS_DRY_RUN:true}
-    enterprise-id: ${TPLUS_ENTERPRISE_ID:1243333710211666}
-    account-id: ${TPLUS_ACCOUNT_ID:}
+    account-id: ${TPLUS_ACCOUNT_ID:1243337607745442}
     app-key: ${TPLUS_APP_KEY:}
     app-secret: ${TPLUS_APP_SECRET:}
-    open-token: ${TPLUS_OPEN_TOKEN:}
-    token-url: ${TPLUS_TOKEN_URL:}
+    token-url: ${TPLUS_TOKEN_URL:https://openapi.chanjet.com/auth/v2/getToken}
     base-url: ${TPLUS_BASE_URL:https://openapi.chanjet.com}
     supplier-path: ${TPLUS_SUPPLIER_PATH:/tplus/api/v2/partner/QueryPage}
     material-path: ${TPLUS_MATERIAL_PATH:}

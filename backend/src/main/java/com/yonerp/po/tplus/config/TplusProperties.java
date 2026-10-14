@@ -12,12 +12,10 @@ public class TplusProperties {
 
     private boolean enabled = false;
     private boolean dryRun = true;
-    private String enterpriseId = "1243333710211666";
-    private String accountId = "";
+    private String accountId = "1243337607745442";
     private String appKey = "";
     private String appSecret = "";
-    private String openToken = "";
-    private String tokenUrl = "";
+    private String tokenUrl = "https://openapi.chanjet.com/auth/v2/getToken";
     private String baseUrl = "https://openapi.chanjet.com";
     private String supplierPath = "/tplus/api/v2/partner/QueryPage";
     private String materialPath = "";
@@ -33,7 +31,7 @@ public class TplusProperties {
         return !appKey.isBlank() && !appSecret.isBlank();
     }
 
-    public boolean hasOpenToken() {
-        return !openToken.isBlank();
+    public boolean hasAccount() {
+        return accountId != null && !accountId.isBlank();
     }
 }

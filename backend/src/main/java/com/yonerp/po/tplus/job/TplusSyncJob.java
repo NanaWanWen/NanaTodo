@@ -22,7 +22,7 @@ public class TplusSyncJob {
             return;
         }
         try {
-            log.info("T+ read-only preview sync started, enterpriseId={}", properties.getEnterpriseId());
+            log.info("T+ read-only preview sync started, accountId={}", properties.getAccountId());
             syncService.preview();
             log.info("T+ read-only preview sync finished");
         } catch (Exception ex) {
