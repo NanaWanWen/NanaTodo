@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { App as AntdApp, Button, Input, Modal, Select, Space, Table, Tag } from 'antd'
+import { App as AntdApp, Button, Input, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { receiptApi } from '../../api/receipts'
 import { orderApi } from '../../api/orders'
+import { optionsApi } from '../../api/options'
 import { PageCard } from '../../components/PageCard'
+import { SearchSelect } from '../../components/SearchSelect'
+import { ImportModal } from '../../components/ImportModal'
 import type { OrderItem, ReceiptCreatePayload, ReceiptListItem } from '../../types'
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -31,17 +34,13 @@ export function ReceiptListPage() {
   const [pageSize, setPageSize] = useState(10)
 
   const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState<number | undefined>()
   const [receivedQtyMap, setReceivedQtyMap] = useState<Record<number, number>>({})
 
   const { data, isFetching } = useQuery({
     queryKey: ['receipts', keyword, status, pageNo, pageSize],
     queryFn: () => receiptApi.page({ keyword: keyword || undefined, status, pageNo, pageSize })
-  })
-
-  const { data: orderPage = { records: [], total: 0 } } = useQuery({
-    queryKey: ['orders-for-receipt'],
-    queryFn: async () => orderApi.page({ pageNo: 1, pageSize: 100, status: 'APPROVED' })
   })
 
   const { data: orderDetail } = useQuery({
@@ -87,8 +86,9 @@ export function ReceiptListPage() {
   const cancelMutation = useMutation({
     mutationFn: (id: number) => receiptApi.cancel(id),
     onSuccess: () => {
-      message.success('收货已取消')
+      message.success('收货单已取消（已冲回库存并触发重匹配）')
       queryClient.invalidateQueries({ queryKey: ['receipts'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
     },
     onError: (error: Error) => message.error(error.message)
   })
@@ -142,6 +142,19 @@ export function ReceiptListPage() {
               </Button>
             </>
           )}
+          {record.status === 'CONFIRMED' && (
+            <Popconfirm
+              title="确认撤销该已确认收货单？"
+              description="将冲回对应库存并触发三单匹配重算，请谨慎操作"
+              okText="撤销"
+              cancelText="取消"
+              onConfirm={() => cancelMutation.mutate(record.id)}
+            >
+              <Button type="link" size="small" danger>
+                取消
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       )
     }
@@ -182,6 +195,7 @@ export function ReceiptListPage() {
             <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['receipts'] })}>
               查询
             </Button>
+            <Button onClick={() => setImportModalOpen(true)}>Excel 导入</Button>
             <Button type="primary" onClick={() => setCreateModalOpen(true)}>
               新建收货单
             </Button>
@@ -225,18 +239,14 @@ export function ReceiptListPage() {
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-xs text-ink-muted">选择采购订单</label>
-            <Select
+            <SearchSelect
               style={{ width: '100%', marginTop: 4 }}
-              placeholder="请选择已审批的采购订单"
-              value={selectedOrderId}
+              placeholder="输入订单号、标题或供应商搜索"
+              fetchOptions={(keyword) => optionsApi.receivableOrders(keyword)}
               onChange={(v) => {
                 setSelectedOrderId(v)
                 setReceivedQtyMap({})
               }}
-              options={orderPage.records.map((o) => ({
-                value: o.id,
-                label: `${o.orderNo} · ${o.supplierName} · ${money(o.totalAmount)}`
-              }))}
             />
           </div>
 
@@ -278,6 +288,14 @@ export function ReceiptListPage() {
           )}
         </div>
       </Modal>
+
+      <ImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        bizType="RECEIPT"
+        bizLabel="收货单"
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['receipts'] })}
+      />
     </div>
   )
 }

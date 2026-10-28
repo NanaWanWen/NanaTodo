@@ -19,6 +19,7 @@ import com.yonerp.po.order.entity.PoOrder;
 import com.yonerp.po.order.entity.PoOrderItem;
 import com.yonerp.po.order.mapper.PoOrderItemMapper;
 import com.yonerp.po.order.mapper.PoOrderMapper;
+import com.yonerp.po.ap.event.ReceiptConfirmedEvent;
 import com.yonerp.po.receipt.dto.ReceiptCreateCmd;
 import com.yonerp.po.receipt.dto.ReceiptQuery;
 import com.yonerp.po.receipt.entity.PoReceipt;
@@ -43,8 +44,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 采购收货服务实现：创建收货单、确认/取消、库存联动
@@ -65,6 +68,7 @@ public class ReceiptServiceImpl implements ReceiptService {
     private final CacheService cacheService;
     private final CacheEvictor cacheEvictor;
     private final PermissionChecker permissionChecker;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Override
     public PageResult<ReceiptListVO> page(ReceiptQuery query) {
@@ -219,6 +223,10 @@ public class ReceiptServiceImpl implements ReceiptService {
         // 库存入库
         List<PoReceiptItem> items = itemMapper.selectList(
                 new LambdaQueryWrapper<PoReceiptItem>().eq(PoReceiptItem::getReceiptId, id));
+
+        // 超收硬拦截：任一明细行「实收 + 已确认收货」不得超订单行数量；并附缺料清单引导填到正确行
+        checkNoOverReceipt(receipt.getOrderId(), items);
+
         for (PoReceiptItem item : items) {
             if (item.getReceivedQty().compareTo(BigDecimal.ZERO) > 0) {
                 inventoryService.addStock(item.getMaterialId(), item.getReceivedQty());
@@ -238,21 +246,101 @@ public class ReceiptServiceImpl implements ReceiptService {
 
         cacheEvictor.evictOrderRelated();
         log.info("确认收货：receiptNo={}", receipt.getReceiptNo());
+
+        // 发布收货确认事件（事务提交后异步触发自动结算）
+        eventPublisher.publishEvent(new ReceiptConfirmedEvent(this, receipt.getId(), receipt.getOrderId()));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(Long id) {
         PoReceipt receipt = requireReceipt(id);
-        if (!"DRAFT".equals(receipt.getStatus())) {
-            throw BizException.statusNotAllow("仅草稿状态的收货单可以取消");
+        boolean confirmed = "CONFIRMED".equals(receipt.getStatus());
+        if (!"DRAFT".equals(receipt.getStatus()) && !confirmed) {
+            throw BizException.statusNotAllow("仅草稿或已确认的收货单可以取消");
+        }
+        // 已确认收货单取消：冲回当时入库的库存，避免库存虚增
+        if (confirmed) {
+            List<PoReceiptItem> items = itemMapper.selectList(
+                    new LambdaQueryWrapper<PoReceiptItem>().eq(PoReceiptItem::getReceiptId, id));
+            for (PoReceiptItem item : items) {
+                if (item.getReceivedQty().compareTo(BigDecimal.ZERO) > 0) {
+                    inventoryService.subtractStock(item.getMaterialId(), item.getReceivedQty());
+                }
+            }
         }
         receipt.setStatus("CANCELED");
         receiptMapper.updateById(receipt);
-        log.info("取消收货：receiptNo={}", receipt.getReceiptNo());
+        cacheEvictor.evictOrderRelated();
+        log.info("取消收货：receiptNo={}, 已确认冲回库存={}", receipt.getReceiptNo(), confirmed);
+        // 已确认单取消后收货净额变化，触发三单匹配重算
+        if (confirmed) {
+            eventPublisher.publishEvent(new ReceiptConfirmedEvent(this, receipt.getId(), receipt.getOrderId()));
+        }
     }
 
     // ==================== 私有方法 ====================
+
+    /**
+     * 超收硬拦截：校验收货单各明细行「本次实收 + 同订单已确认收货」不超过订单行数量。
+     * 命中超收时抛出异常，并列出订单中仍未收足的物料行，引导用户把数量改填到正确行。
+     */
+    private void checkNoOverReceipt(Long orderId, List<PoReceiptItem> items) {
+        // 订单各行数量与物料
+        List<PoOrderItem> orderItems = orderItemMapper.selectList(
+                new LambdaQueryWrapper<PoOrderItem>().eq(PoOrderItem::getOrderId, orderId));
+        Map<Long, BigDecimal> orderQty = new HashMap<>();
+        Map<Long, Long> itemMaterial = new HashMap<>();
+        for (PoOrderItem oi : orderItems) {
+            orderQty.put(oi.getId(), oi.getQty());
+            itemMaterial.put(oi.getId(), oi.getMaterialId());
+        }
+
+        // 同订单已确认收货在各订单行的累计实收（本单仍为 DRAFT，不计入）
+        Map<Long, BigDecimal> receivedSoFar = new HashMap<>();
+        List<PoReceipt> confirmedReceipts = receiptMapper.selectList(
+                new LambdaQueryWrapper<PoReceipt>()
+                        .eq(PoReceipt::getOrderId, orderId)
+                        .eq(PoReceipt::getStatus, "CONFIRMED"));
+        for (PoReceipt cr : confirmedReceipts) {
+            for (PoReceiptItem ci : itemMapper.selectList(
+                    new LambdaQueryWrapper<PoReceiptItem>().eq(PoReceiptItem::getReceiptId, cr.getId()))) {
+                receivedSoFar.merge(ci.getOrderItemId(), ci.getReceivedQty(), BigDecimal::add);
+            }
+        }
+
+        // 本单将收数量按订单行聚合
+        Map<Long, BigDecimal> willReceive = new HashMap<>();
+        for (PoReceiptItem item : items) {
+            willReceive.merge(item.getOrderItemId(), item.getReceivedQty(), BigDecimal::add);
+        }
+
+        boolean over = false;
+        StringBuilder overLines = new StringBuilder();
+        StringBuilder shortageLines = new StringBuilder();
+        for (Map.Entry<Long, BigDecimal> e : orderQty.entrySet()) {
+            Long orderItemId = e.getKey();
+            BigDecimal ordered = e.getValue();
+            BigDecimal already = receivedSoFar.getOrDefault(orderItemId, BigDecimal.ZERO);
+            BigDecimal adding = willReceive.getOrDefault(orderItemId, BigDecimal.ZERO);
+            BigDecimal unreceived = ordered.subtract(already);
+            if (already.add(adding).compareTo(ordered) > 0) {
+                over = true;
+                overLines.append(String.format("  · 物料%s 本次实收%s，超过订单未收%s件%n",
+                        itemMaterial.get(orderItemId), adding, unreceived));
+            }
+            if (unreceived.compareTo(BigDecimal.ZERO) > 0) {
+                shortageLines.append(String.format("物料%s 还差%s件；", itemMaterial.get(orderItemId), unreceived));
+            }
+        }
+
+        if (over) {
+            String msg = "收货数量超过订单未收数量，已拦截：\n" + overLines
+                    + "当前订单仍未收足：" + shortageLines
+                    + "请将数量改填到仍未收足的物料行后重新确认。";
+            throw new BizException(2006, msg);
+        }
+    }
 
     private PoReceipt requireReceipt(Long id) {
         PoReceipt receipt = receiptMapper.selectById(id);

@@ -5,6 +5,11 @@ spring:
   application:
     name: yonerp-po
 
+  # 加载 .env 文件（API Key 等敏感配置）
+  # 多候选路径：兼容从 backend/ 目录（mvn spring-boot:run）与项目根目录（IDE）两种工作目录启动
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
+
   # ==================== 数据源 ====================
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

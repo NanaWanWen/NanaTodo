@@ -25,7 +25,9 @@
                SUM(CASE WHEN o.status = 'APPROVING' THEN o.total_amount ELSE 0 END)   AS approvingAmount,
                SUM(CASE WHEN o.status = 'APPROVED' THEN 1 ELSE 0 END)                 AS approvedCount,
                SUM(CASE WHEN o.status = 'REJECTED' THEN 1 ELSE 0 END)                 AS rejectedCount,
-               SUM(CASE WHEN o.status = 'CANCELED' THEN 1 ELSE 0 END)                 AS canceledCount
+               SUM(CASE WHEN o.status = 'CANCELED' THEN 1 ELSE 0 END)                 AS canceledCount,
+               SUM(CASE WHEN o.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completedCount,
+               SUM(CASE WHEN o.status = 'COMPLETED' THEN o.total_amount ELSE 0 END) AS completedAmount
         FROM po_order o
         <where>
             <include refid="scopeFilter"/>

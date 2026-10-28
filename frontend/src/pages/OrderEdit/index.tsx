@@ -16,7 +16,10 @@ import type { TableProps } from 'antd'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { orderApi } from '../../api/orders'
 import { baseApi } from '../../api/base'
+import { optionsApi } from '../../api/options'
 import { PageCard } from '../../components/PageCard'
+import { SearchSelect } from '../../components/SearchSelect'
+import { ImportModal } from '../../components/ImportModal'
 import type { MaterialItem, OrderItem } from '../../types'
 import dayjs from 'dayjs'
 
@@ -51,11 +54,7 @@ export function OrderEditPage() {
   const [remark, setRemark] = useState('')
   const [version, setVersion] = useState<number>()
   const [rows, setRows] = useState<RowItem[]>([emptyRow(10)])
-
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: () => baseApi.suppliers()
-  })
+  const [importModalOpen, setImportModalOpen] = useState(false)
 
   const { data: materials = [] } = useQuery({
     queryKey: ['materials'],
@@ -308,16 +307,11 @@ export function OrderEditPage() {
             <span className="text-sm text-ink-muted">
               供应商 <span className="text-functional-danger">*</span>
             </span>
-            <Select
-              showSearch
-              optionFilterProp="label"
-              placeholder="请选择供应商"
+            <SearchSelect
+              placeholder="输入供应商编码、名称或联系人搜索"
               value={supplierId}
               onChange={setSupplierId}
-              options={suppliers.map((item) => ({
-                value: item.id,
-                label: item.supplierName
-              }))}
+              fetchOptions={(keyword) => optionsApi.suppliers(keyword)}
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -407,12 +401,24 @@ export function OrderEditPage() {
           >
             保存并提交审批
           </Button>
+          {!isEdit && <Button onClick={() => setImportModalOpen(true)}>Excel 导入</Button>}
           <Button onClick={() => navigate(-1)}>返回</Button>
         </Space>
         <span className="ml-4 text-xs text-ink-muted">
           金额由服务端按明细重算，前端仅作试算展示
         </span>
       </Card>
+
+      <ImportModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        bizType="ORDER"
+        bizLabel="采购订单"
+        onSuccess={() => {
+          invalidate()
+          navigate('/orders')
+        }}
+      />
     </div>
   )
 }

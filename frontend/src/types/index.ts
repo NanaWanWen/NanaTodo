@@ -306,13 +306,25 @@ export interface InvoiceListItem {
   invoiceAmount: number
   taxAmount: number
   totalAmount: number
-  invoiceStatus: 'UNCHECKED' | 'CHECKED' | 'PAID'
+  invoiceStatus: 'UNCHECKED' | 'CHECKED' | 'PAID' | 'RED_FLUSHED'
+  invoiceType?: 'BLUE' | 'RED'
+  relatedInvoiceNo?: string
   createTime: string
 }
 
 /** 发票创建 */
 export interface InvoiceCreatePayload {
   receiptId: number
+  invoiceDate?: string
+  remark?: string
+  invoiceAmount?: number
+  taxAmount?: number
+}
+
+/** 发票修改（仅未核对） */
+export interface InvoiceUpdatePayload {
+  invoiceAmount: number
+  taxAmount: number
   invoiceDate?: string
   remark?: string
 }
@@ -359,20 +371,64 @@ export interface InventoryItem {
 /** 应付对账列表项 */
 export interface ApSettlementListItem {
   id: number
+  matchNo: string
   orderId: number
   orderNo: string
-  receiptId: number
-  receiptNo: string
-  invoiceId: number
-  invoiceNo: string
+  receiptId?: number
+  receiptNo?: string
+  invoiceId?: number
+  invoiceNo?: string
+  supplierId: number
+  supplierName: string
   orderAmount: number
   receiptAmount: number
   invoiceAmount: number
   diffAmount: number
-  matchStatus: 'UNMATCHED' | 'MATCHED' | 'PARTIAL'
+  qtyDiff: number
+  priceDiff: number
+  taxDiff: number
+  diffType?: 'QTY' | 'PRICE' | 'TAX' | 'EXCHANGE' | 'AMOUNT'
+  matchStatus: 'MATCHED' | 'PARTIAL_QTY' | 'PARTIAL_AMOUNT' | 'HOLD' | 'UNMATCHED' | 'CLOSED' | 'REVERSED'
+  matchType: 'AUTO' | 'MANUAL' | 'FORCE'
+  matchRuleCode?: string
+  currency: string
   tolerance: number
+  matchedBy?: number
+  matchedByName?: string
+  matchedTime?: string
+  holdReason?: string
+  resolution?: string
   remark?: string
   updateTime: string
+}
+
+/** 暂估应付列表项 */
+export interface AccrualItem {
+  id: number
+  accrualNo: string
+  receiptId: number
+  receiptNo?: string
+  orderId: number
+  orderNo?: string
+  supplierId: number
+  supplierName?: string
+  materialId: number
+  materialCode?: string
+  materialName?: string
+  accrualQty: number
+  accrualPrice: number
+  accrualAmount: number
+  accrualDate: string
+  accrualPeriod: string
+  status: 'ACCRUED' | 'REVERSED'
+  reverseInvoiceId?: number
+  reverseInvoiceNo?: string
+  reverseDate?: string
+  reverseAmount?: number
+  diffAmount?: number
+  accrualMode: 'SINGLE' | 'MONTHLY'
+  remark?: string
+  createTime: string
 }
 
 /** 供应商应付余额 */
@@ -391,13 +447,65 @@ export interface SupplierBalanceVO {
 export interface AgentAlertVO {
   alertId: string
   alertType: string
+  /** 业务域 PURCHASE/INVENTORY/FINANCE */
+  bizDomain?: string
+  /** 命中规则编码 */
+  ruleCode?: string
+  ruleId?: number
   level: 'INFO' | 'WARNING' | 'CRITICAL'
   title: string
   content: string
   refId: number
   refNo: string
+  /** 引用单据类型 ORDER/RECEIPT/INVOICE/PAYMENT/MATERIAL */
+  refType?: string
   createTime: string
   handled: boolean
+  ignored?: boolean
+  readFlag?: boolean
+  assigneeId?: number
+  assignee?: string
+  handleBy?: string
+  handleTime?: string
+  handleNote?: string
+  actionPath?: string
+  actions?: AlertActionVO[]
+}
+
+/** 预警处理流水（审计时间线） */
+export interface AlertActionVO {
+  id: number
+  alertId: string
+  action: 'CREATE' | 'READ' | 'ASSIGN' | 'TRANSFER' | 'HANDLE' | 'IGNORE' | 'RESTORE' | 'ESCALATE'
+  fromUser?: string
+  toUser?: string
+  operator?: string
+  operatorId?: number
+  note?: string
+  createTime: string
+}
+
+/** 预警规则配置 */
+export interface AgentAlertRule {
+  id?: number
+  ruleCode: string
+  ruleName: string
+  bizDomain: 'PURCHASE' | 'INVENTORY' | 'FINANCE'
+  alertType: string
+  level: 'INFO' | 'WARNING' | 'CRITICAL'
+  thresholdUnit?: string
+  threshold?: number
+  extraConfig?: string
+  enabled: number
+  scanCron?: string
+  notifyChannel?: string
+  notifyRoles?: string
+  ownerRole?: string
+  remark?: string
+  createBy?: string
+  createTime?: string
+  updateBy?: string
+  updateTime?: string
 }
 
 /** AI 建议（辅助审批/发票校验/付款） */

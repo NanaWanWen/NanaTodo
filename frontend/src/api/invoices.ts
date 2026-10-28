@@ -1,5 +1,5 @@
 import { newIdempotencyKey, request, unwrap } from './request'
-import type { InvoiceCreatePayload, InvoiceListItem, PageResult, Result } from '../types'
+import type { InvoiceCreatePayload, InvoiceListItem, InvoiceUpdatePayload, PageResult, Result } from '../types'
 
 export interface InvoiceQueryParams {
   keyword?: string
@@ -26,6 +26,21 @@ export const invoiceApi = {
 
   uncheck: (id: number): Promise<void> =>
     unwrap(request.post<Result<void>>(`/invoices/${id}/actions/uncheck`, {}, {
+      headers: { 'Idempotency-Key': newIdempotencyKey() }
+    })),
+
+  update: (id: number, payload: InvoiceUpdatePayload): Promise<void> =>
+    unwrap(request.put<Result<void>>(`/invoices/${id}`, payload, {
+      headers: { 'Idempotency-Key': newIdempotencyKey() }
+    })),
+
+  redFlush: (id: number, payload?: { remark?: string }): Promise<number> =>
+    unwrap(request.post<Result<number>>(`/invoices/${id}/actions/red-flush`, payload ?? {}, {
+      headers: { 'Idempotency-Key': newIdempotencyKey() }
+    })),
+
+  voidInvoice: (id: number): Promise<void> =>
+    unwrap(request.post<Result<void>>(`/invoices/${id}/actions/void`, {}, {
       headers: { 'Idempotency-Key': newIdempotencyKey() }
     }))
 }

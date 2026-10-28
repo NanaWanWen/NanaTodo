@@ -5,6 +5,8 @@ import com.yonerp.po.common.Result;
 import com.yonerp.po.common.enums.RoleCode;
 import com.yonerp.po.invoice.dto.InvoiceCreateCmd;
 import com.yonerp.po.invoice.dto.InvoiceQuery;
+import com.yonerp.po.invoice.dto.InvoiceRedFlushCmd;
+import com.yonerp.po.invoice.dto.InvoiceUpdateCmd;
 import com.yonerp.po.invoice.service.InvoiceService;
 import com.yonerp.po.invoice.vo.InvoiceListVO;
 import com.yonerp.po.security.RequireRole;
@@ -56,6 +58,29 @@ public class InvoiceController {
     @RequireRole({RoleCode.BUYER, RoleCode.ADMIN})
     public Result<Void> uncheck(@PathVariable Long id) {
         invoiceService.uncheck(id);
+        return Result.ok();
+    }
+
+    @PutMapping("/{id}")
+    @RequireRole({RoleCode.BUYER, RoleCode.ADMIN})
+    public Result<Void> update(@PathVariable Long id, @Valid @RequestBody InvoiceUpdateCmd cmd) {
+        invoiceService.update(id, cmd);
+        return Result.ok();
+    }
+
+    @PostMapping("/{id}/actions/red-flush")
+    @RequireRole({RoleCode.BUYER, RoleCode.ADMIN})
+    public Result<Long> redFlush(@PathVariable Long id, @RequestBody(required = false) InvoiceRedFlushCmd cmd) {
+        if (cmd == null) {
+            cmd = new InvoiceRedFlushCmd();
+        }
+        return Result.ok(invoiceService.redFlush(id, cmd));
+    }
+
+    @PostMapping("/{id}/actions/void")
+    @RequireRole({RoleCode.BUYER, RoleCode.ADMIN})
+    public Result<Void> voidInvoice(@PathVariable Long id) {
+        invoiceService.voidInvoice(id);
         return Result.ok();
     }
 }

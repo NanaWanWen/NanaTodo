@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { App as AntdApp, Button, Card, Select, Tag, Typography } from 'antd'
 import { useQuery } from '@tanstack/react-query'
 import { authApi } from '../../api/auth'
+import { queryClient } from '../../api/queryClient'
 import { useAuthStore } from '../../store/useAuthStore'
 import type { RoleCode } from '../../types'
 
@@ -63,6 +64,8 @@ export function LoginPage() {
     if (!result) {
       return
     }
+    // 登录新用户：清空上一个用户的 React Query 缓存，防止数据串号
+    queryClient.clear()
     setUser({
       userId: result.userId,
       username: result.username,

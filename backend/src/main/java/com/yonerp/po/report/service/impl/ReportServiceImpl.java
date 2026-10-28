@@ -87,6 +87,8 @@ public class ReportServiceImpl implements ReportService {
             vo.setApprovedCount(dto.getApprovedCount());
             vo.setRejectedCount(dto.getRejectedCount());
             vo.setCanceledCount(dto.getCanceledCount());
+            vo.setCompletedCount(dto.getCompletedCount());
+            vo.setCompletedAmount(dto.getCompletedAmount() == null ? BigDecimal.ZERO : dto.getCompletedAmount());
         }
         cacheService.set(key, vo, Duration.ofMinutes(5), 60);
         return vo;

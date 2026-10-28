@@ -1,6 +1,7 @@
 package com.yonerp.po.order.service;
 
 import com.yonerp.po.common.PageResult;
+import com.yonerp.po.order.dto.OrderItemRequest;
 import com.yonerp.po.order.dto.OrderQuery;
 import com.yonerp.po.order.dto.OrderSaveRequest;
 import com.yonerp.po.order.entity.PoOrder;
@@ -33,6 +34,12 @@ public interface OrderService {
      * 编辑（仅草稿或已驳回）
      */
     void update(Long id, OrderSaveRequest request);
+
+    /**
+     * 调价（订单变更/修订）：仅调整明细单价并重算金额，触发三单匹配重算
+     * （支撑差异处理「调价」动作闭环，不校验草稿状态）
+     */
+    void adjustPrice(Long id, List<OrderItemRequest> items);
 
     /**
      * 删除（仅草稿）

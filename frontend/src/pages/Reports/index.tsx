@@ -33,6 +33,7 @@ import { reportApi } from '../../api/reports'
 import { apApi } from '../../api/ap'
 import { paymentApi } from '../../api/payments'
 import { PageCard } from '../../components/PageCard'
+import { matchStatusMeta } from '../../utils/matchMeta'
 import dayjs from 'dayjs'
 import type {
   ApSettlementListItem,
@@ -95,12 +96,6 @@ const PAYMENT_STATUS: Record<string, { label: string; color: string }> = {
   PENDING: { label: '待付款', color: 'orange' },
   PAID: { label: '已付款', color: 'green' },
   REJECTED: { label: '已驳回', color: 'red' }
-}
-
-const MATCH_STATUS: Record<string, { label: string; color: string }> = {
-  MATCHED: { label: '已匹配', color: 'green' },
-  PARTIAL: { label: '部分匹配', color: 'orange' },
-  UNMATCHED: { label: '未匹配', color: 'default' }
 }
 
 /**
@@ -334,7 +329,7 @@ function PurchaseReportsPanel() {
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         <AntCard className="shadow-card">
           <Statistic
-            title="订单总数"
+            title="订单总数（全部口径）"
             value={summary?.totalCount ?? 0}
             suffix="单"
             valueStyle={{ color: '#1C2B45' }}
@@ -342,7 +337,7 @@ function PurchaseReportsPanel() {
         </AntCard>
         <AntCard className="shadow-card">
           <Statistic
-            title="订单总金额"
+            title="订单总金额（全部口径）"
             value={summary?.totalAmount ?? 0}
             precision={2}
             prefix="¥"
@@ -365,6 +360,14 @@ function PurchaseReportsPanel() {
             valueStyle={{ color: '#52C41A' }}
           />
         </AntCard>
+      </div>
+
+      <div className="rounded-lg border border-blue-100 bg-blue-50/60 px-4 py-3 text-xs leading-relaxed text-ink-muted">
+        <b className="text-ink">口径说明：</b>
+        上方四张卡片为<b>全部订单</b>口径（含草稿 / 审批中 / 已审批 / 已驳回 / 已取消）；
+        下方各统计表默认只统计<b>生效订单（审批中 + 已审批）</b>，
+        因此表内合计会小于卡片总数——这是筛选口径差异，不是数据错误。
+        需要对齐时，把「订单状态」切换为对应状态即可（如选「已审批」即与「已审批」卡片一致）。
       </div>
 
       <PageCard
@@ -593,9 +596,10 @@ function ApReconciliationPanel() {
       title: '匹配状态',
       dataIndex: 'matchStatus',
       width: 110,
-      render: (v: string) => (
-        <Tag color={MATCH_STATUS[v]?.color}>{MATCH_STATUS[v]?.label ?? v}</Tag>
-      )
+      render: (v: string) => {
+        const meta = matchStatusMeta(v)
+        return <Tag color={meta.color}>{meta.label}</Tag>
+      }
     }
   ]
 

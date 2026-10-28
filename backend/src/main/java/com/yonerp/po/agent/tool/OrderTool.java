@@ -2,6 +2,8 @@ package com.yonerp.po.agent.tool;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.yonerp.po.common.PageResult;
 import com.yonerp.po.order.dto.OrderQuery;
 import com.yonerp.po.order.service.OrderService;
@@ -22,7 +24,10 @@ import java.util.List;
 public class OrderTool {
 
     private final OrderService orderService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    /** 注册 JSR310 模块，否则 LocalDate/LocalDateTime 序列化会失败 */
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     @Tool("查询采购订单列表，可按状态/供应商/日期筛选")
     public String queryOrders(@P("订单状态：DRAFT/APPROVING/APPROVED/REJECTED/CANCELED/COMPLETED，可空") String status,
@@ -43,11 +48,15 @@ public class OrderTool {
     public String queryOverdueOrders() {
         OrderQuery query = new OrderQuery();
         query.setStatus("APPROVING");
-        query.setEndDate(LocalDate.now().minusDays(1));
         query.setPageNo(1);
         query.setPageSize(50);
+        // 查询候选审批中订单后，按 expectDate 判断是否逾期，不能用 endDate 过滤 orderDate。
         PageResult<OrderListVO> page = orderService.page(query);
-        return toJson(page);
+        LocalDate today = LocalDate.now();
+        List<OrderListVO> overdue = page.getRecords().stream()
+                .filter(order -> order.getExpectDate() != null && order.getExpectDate().isBefore(today))
+                .toList();
+        return toJson(overdue);
     }
 
     private String toJson(Object obj) {

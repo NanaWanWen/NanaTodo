@@ -3,6 +3,8 @@ package com.yonerp.po.payment.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yonerp.po.ap.entity.PoApSettlement;
+import com.yonerp.po.ap.mapper.ApSettlementMapper;
 import com.yonerp.po.base.entity.Supplier;
 import com.yonerp.po.base.mapper.SupplierMapper;
 import com.yonerp.po.common.BizException;
@@ -48,6 +50,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentMapper paymentMapper;
     private final InvoiceMapper invoiceMapper;
+    private final ApSettlementMapper settlementMapper;
     private final PoOrderMapper orderMapper;
     private final SupplierMapper supplierMapper;
     private final CacheService cacheService;
@@ -92,9 +95,41 @@ public class PaymentServiceImpl implements PaymentService {
             throw BizException.statusNotAllow("仅已核对的发票可以创建付款单");
         }
 
+        // 付款联动：校验三单匹配状态
+        PoApSettlement settlement = settlementMapper.selectOne(
+            new LambdaQueryWrapper<PoApSettlement>()
+                .eq(PoApSettlement::getInvoiceId, cmd.getInvoiceId())
+                .eq(PoApSettlement::getDeleted, 0)
+        );
+        if (settlement == null) {
+            throw BizException.statusNotAllow("该发票尚未完成三单匹配，无法创建付款单");
+        }
+        if (!"MATCHED".equals(settlement.getMatchStatus())) {
+            throw BizException.statusNotAllow(
+                String.format("三单匹配状态为 %s（非完全匹配），请先处理差异后再付款", settlement.getMatchStatus())
+            );
+        }
+
         BigDecimal paymentAmount = cmd.getPaymentAmount() != null ? cmd.getPaymentAmount() : invoice.getTotalAmount();
         if (MoneyUtils.isNegative(paymentAmount)) {
             throw BizException.param("付款金额不能为负数");
+        }
+        if (paymentAmount.compareTo(BigDecimal.ZERO) == 0) {
+            throw BizException.param("付款金额必须大于 0");
+        }
+
+        // 累计已付/待付金额校验：同一发票的所有有效付款单（PENDING/PAID）之和不得超过发票价税合计
+        BigDecimal paidSum = paymentMapper.selectList(new LambdaQueryWrapper<PoPayment>()
+                        .eq(PoPayment::getInvoiceId, cmd.getInvoiceId())
+                        .in(PoPayment::getStatus, "PENDING", "PAID"))
+                .stream()
+                .map(PoPayment::getPaymentAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remain = invoice.getTotalAmount().subtract(paidSum);
+        if (paymentAmount.compareTo(remain) > 0) {
+            throw BizException.param(String.format(
+                    "付款金额 %s 超过发票未付余额 %s（发票金额 %s，已付/待付 %s）",
+                    paymentAmount, remain, invoice.getTotalAmount(), paidSum));
         }
 
         PoPayment payment = new PoPayment();

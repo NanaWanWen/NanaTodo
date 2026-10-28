@@ -14,8 +14,13 @@ import { InvoiceListPage } from './pages/InvoiceList'
 import { PaymentListPage } from './pages/PaymentList'
 import { StockListPage } from './pages/StockList'
 import { ApSettlementListPage } from './pages/ApSettlementList'
+import { MatchRulesPage } from './pages/MatchRules'
+import { AccrualsPage } from './pages/Accruals'
+import { DiffWorkbenchPage } from './pages/DiffWorkbench'
 import { AgentChatPage } from './pages/AgentChat'
 import { AgentAlertsPage } from './pages/AgentAlerts'
+import { AlertRulesPage } from './pages/AlertRules'
+import { WorkbenchPage } from './pages/Workbench'
 
 export default function App() {
   return (
@@ -31,7 +36,8 @@ export default function App() {
             </RoleGuard>
           }
         >
-          <Route index element={<Navigate to="/orders" replace />} />
+          <Route index element={<Navigate to="/workbench" replace />} />
+          <Route path="workbench" element={<WorkbenchPage />} />
           <Route path="orders" element={<OrderListPage />} />
           <Route
             path="orders/create"
@@ -100,11 +106,36 @@ export default function App() {
               </RoleGuard>
             }
           />
+          <Route
+            path="ap-match-rules"
+            element={
+              <RoleGuard roles={['PURCHASE_MANAGER', 'ADMIN']}>
+                <MatchRulesPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="ap-accruals"
+            element={
+              <RoleGuard roles={['PURCHASE_MANAGER', 'ADMIN']}>
+                <AccrualsPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="ap-diff-workbench"
+            element={
+              <RoleGuard roles={['BUYER', 'PURCHASE_MANAGER', 'ADMIN']}>
+                <DiffWorkbenchPage />
+              </RoleGuard>
+            }
+          />
           <Route path="agent-chat" element={<AgentChatPage />} />
           <Route path="agent-alerts" element={<AgentAlertsPage />} />
+          <Route path="alert-rules" element={<AlertRulesPage />} />
         </Route>
 
-        <Route path="*" element={<Navigate to="/orders" replace />} />
+        <Route path="*" element={<Navigate to="/workbench" replace />} />
       </Routes>
     </BrowserRouter>
   )

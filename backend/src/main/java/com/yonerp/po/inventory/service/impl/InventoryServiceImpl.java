@@ -43,12 +43,10 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     public List<PoInventory> lowStock() {
-        // 跨列比较（quantity < safety_stock）用 QueryWrapper + 列名字符串
+        // 跨列比较：当前库存 quantity 低于安全库存 safety_stock（apply 用于列与列比较）
         QueryWrapper<PoInventory> wrapper = new QueryWrapper<>();
         wrapper.eq("deleted", 0)
-                .and(w -> w.lt("quantity", "safety_stock")
-                        .or()
-                        .le("quantity", "safety_stock"));
+                .apply("quantity < safety_stock");
         return inventoryMapper.selectList(wrapper);
     }
 

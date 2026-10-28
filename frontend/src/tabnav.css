@@ -1,0 +1,54 @@
+/* 全局多页签导航（吸顶，融入 BIP 浅蓝玻璃风） */
+.bip-tabnav {
+  position: sticky;
+  top: 64px;
+  z-index: 20;
+  margin: 12px 16px 0;
+  padding: 6px 10px 0;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 8px 22px rgba(30, 64, 175, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.bip-tabnav .ant-tabs {
+  margin-bottom: -1px;
+}
+
+.bip-tabnav .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+.bip-tabnav .ant-tabs-tab {
+  border-radius: 10px 10px 0 0 !important;
+  transition: background 160ms ease;
+}
+
+.bip-tabnav .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #1d4ed8 !important;
+  font-weight: 600;
+}
+
+.bip-tabnav .ant-tabs-ink-bar {
+  background: #2563eb;
+  height: 3px;
+  border-radius: 3px;
+}
+
+.bip-tabnav-more {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 10px;
+  margin-left: 8px;
+  border-radius: 8px;
+  color: #475569;
+  cursor: pointer;
+  font-size: 18px;
+  user-select: none;
+}
+
+.bip-tabnav-more:hover {
+  background: #f1f5f9;
+}

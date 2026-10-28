@@ -25,4 +25,8 @@ public class ReportSummaryDTO {
     private Long rejectedCount;
 
     private Long canceledCount;
+
+    private Long completedCount;
+
+    private BigDecimal completedAmount;
 }

@@ -40,6 +40,14 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
 
         Long userId = parseUserId(request.getHeader("X-User-Id"));
+        if (userId == null && path.contains("/stream")) {
+            // EventSource 无法携带自定义请求头，支持通过查询参数 userId 回退鉴权
+            userId = parseUserId(request.getParameter("userId"));
+        }
+        if (userId == null) {
+            throw BizException.unauthorized();
+        }
+
         CurrentUser user = sessionStore.read(userId);
         if (user == null) {
             // Redis 不可用或会话过期：回源数据库重建
@@ -60,14 +68,14 @@ public class AuthInterceptor implements HandlerInterceptor {
         UserContext.clear();
     }
 
-    private Long parseUserId(String header) {
-        if (header == null || header.isBlank()) {
-            throw BizException.unauthorized();
+    private Long parseUserId(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
         }
         try {
-            return Long.parseLong(header.trim());
+            return Long.parseLong(value.trim());
         } catch (NumberFormatException e) {
-            throw BizException.unauthorized();
+            return null;
         }
     }
 

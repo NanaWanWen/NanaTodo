@@ -1,20 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { ConfigProvider, App as AntdApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import App from './App'
+import { ErrorBoundary } from './components/ErrorBoundary'
+import { queryClient } from './api/queryClient'
 import './index.css'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30 * 1000,
-      refetchOnWindowFocus: false,
-      retry: 1
-    }
-  }
-})
+import './tabnav.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -30,7 +23,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     >
       <AntdApp>
         <QueryClientProvider client={queryClient}>
-          <App />
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
         </QueryClientProvider>
       </AntdApp>
     </ConfigProvider>

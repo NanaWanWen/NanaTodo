@@ -1,8 +1,10 @@
 package com.yonerp.po.agent.service;
 
 import com.yonerp.po.agent.dto.AgentAlertVO;
+import com.yonerp.po.agent.dto.AlertActionVO;
 import com.yonerp.po.agent.dto.ChatRequest;
 import com.yonerp.po.agent.dto.SuggestionVO;
+import com.yonerp.po.agent.entity.AgentAlertRule;
 
 import java.util.List;
 
@@ -56,7 +58,15 @@ public interface AgentService {
     SuggestionVO suggestPayment(Long invoiceId, String invoiceContext);
 
     /**
-     * 当前未处理预警列表（Redis）
+     * 预警列表（持久化，默认只返回未处理且未忽略的预警）
+     *
+     * @param handled 是否查询已处理预警（null 表示未处理）
+     * @param ignored 是否查询已忽略预警（null 表示未忽略）
+     */
+    List<AgentAlertVO> listAlerts(Boolean handled, Boolean ignored);
+
+    /**
+     * 当前未处理且未忽略的预警列表
      */
     List<AgentAlertVO> pendingAlerts();
 
@@ -64,4 +74,66 @@ public interface AgentService {
      * 标记预警已处理
      */
     void markAlertHandled(String alertId);
+
+    /**
+     * 忽略预警（不再显示，但保留历史记录）
+     */
+    void ignoreAlert(String alertId);
+
+    /**
+     * 恢复已忽略的预警
+     */
+    void restoreAlert(String alertId);
+
+    // ==================== 新增方法 ====================
+
+    /**
+     * 标记预警已读
+     */
+    void markAlertRead(String alertId);
+
+    /**
+     * 指派预警给指定人
+     */
+    void assignAlert(String alertId, Long assigneeId, String assignee, String note);
+
+    /**
+     * 转办预警给指定人
+     */
+    void transferAlert(String alertId, Long assigneeId, String assignee, String note);
+
+    /**
+     * 处理预警（标记已处理 + 处理意见）
+     */
+    void processAlert(String alertId, String note);
+
+    /**
+     * 预警处理流水（审计时间线）
+     */
+    List<AlertActionVO> getAlertActions(String alertId);
+
+    /**
+     * 站内未读预警计数
+     */
+    long unreadCount();
+
+    /**
+     * 规则列表
+     */
+    List<AgentAlertRule> listAll();
+
+    /**
+     * 创建规则
+     */
+    AgentAlertRule create(AgentAlertRule rule);
+
+    /**
+     * 更新规则
+     */
+    AgentAlertRule update(Long id, AgentAlertRule rule);
+
+    /**
+     * 删除规则
+     */
+    void delete(Long id);
 }

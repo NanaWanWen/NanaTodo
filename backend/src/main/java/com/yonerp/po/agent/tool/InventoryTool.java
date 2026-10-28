@@ -2,6 +2,8 @@ package com.yonerp.po.agent.tool;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.yonerp.po.inventory.entity.PoInventory;
 import com.yonerp.po.inventory.service.InventoryService;
 import dev.langchain4j.agent.tool.P;
@@ -19,7 +21,10 @@ import java.util.List;
 public class InventoryTool {
 
     private final InventoryService inventoryService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    /** 注册 JSR310 模块，否则 LocalDateTime 序列化会失败 */
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule())
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
     @Tool("查询全量库存列表，含物料编码/名称/数量/安全库存")
     public String listInventory() {

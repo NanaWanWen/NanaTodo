@@ -3,6 +3,7 @@ package com.yonerp.po.order.controller;
 import com.yonerp.po.common.PageResult;
 import com.yonerp.po.common.Result;
 import com.yonerp.po.common.enums.RoleCode;
+import com.yonerp.po.order.dto.OrderItemRequest;
 import com.yonerp.po.order.dto.OrderQuery;
 import com.yonerp.po.order.dto.OrderSaveRequest;
 import com.yonerp.po.order.service.OrderService;
@@ -78,6 +79,13 @@ public class OrderController {
     @RequireRole({RoleCode.BUYER, RoleCode.ADMIN})
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody OrderSaveRequest request) {
         orderService.update(id, request);
+        return Result.ok();
+    }
+
+    @PostMapping("/{id}/adjust-price")
+    @RequireRole({RoleCode.BUYER, RoleCode.ADMIN})
+    public Result<Void> adjustPrice(@PathVariable Long id, @Valid @RequestBody List<OrderItemRequest> items) {
+        orderService.adjustPrice(id, items);
         return Result.ok();
     }
 

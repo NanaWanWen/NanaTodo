@@ -36,5 +36,11 @@ public class InvoiceListVO {
 
     private String invoiceStatus;
 
+    /** 发票类型：BLUE 蓝字 / RED 红字 */
+    private String invoiceType;
+
+    /** 红蓝关联：被红冲原发票号 */
+    private String relatedInvoiceNo;
+
     private LocalDateTime createTime;
 }

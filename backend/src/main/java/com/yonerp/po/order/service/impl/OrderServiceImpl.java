@@ -22,6 +22,7 @@ import com.yonerp.po.common.enums.TaskStatus;
 import com.yonerp.po.order.dto.OrderItemRequest;
 import com.yonerp.po.order.dto.OrderQuery;
 import com.yonerp.po.order.dto.OrderSaveRequest;
+import com.yonerp.po.order.event.OrderUpdatedEvent;
 import com.yonerp.po.order.entity.PoApprovalLog;
 import com.yonerp.po.order.entity.PoApprovalTask;
 import com.yonerp.po.order.entity.PoOrder;
@@ -42,6 +43,7 @@ import com.yonerp.po.security.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -83,6 +85,8 @@ public class OrderServiceImpl implements OrderService {
     private final CacheEvictor cacheEvictor;
 
     private final PermissionChecker permissionChecker;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public PageResult<OrderListVO> page(OrderQuery query) {
@@ -238,6 +242,25 @@ public class OrderServiceImpl implements OrderService {
         persistItems(id, items);
         cacheEvictor.evictOrderRelated();
         log.info("编辑订单：orderNo={}, amount={}", exist.getOrderNo(), update.getTotalAmount());
+
+        // 订单调价后触发三单匹配重算（支撑差异处理「调价」动作闭环）
+        eventPublisher.publishEvent(new OrderUpdatedEvent(this, id));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adjustPrice(Long id, List<OrderItemRequest> items) {
+        PoOrder exist = requireOrder(id);
+        List<PoOrderItem> newItems = buildItems(items);
+        PoOrder update = new PoOrder();
+        update.setId(id);
+        applyTotals(update, newItems);
+        orderMapper.updateById(update);
+        persistItems(id, newItems);
+        cacheEvictor.evictOrderRelated();
+        log.info("订单调价：orderNo={}, amount={}", exist.getOrderNo(), update.getTotalAmount());
+        // 触发三单匹配重算（支撑差异处理「调价」动作闭环）
+        eventPublisher.publishEvent(new OrderUpdatedEvent(this, id));
     }
 
     @Override
@@ -356,12 +379,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * 全量替换明细：先逻辑删除旧明细（MyBatis-Plus 的 delete 会自动转成 deleted=1）
+     * 全量替换明细：物理删除旧明细后重插（逻辑删除会占位 line_no 唯一键，故整行物理删除）
      */
     private void clearItems(Long orderId) {
-        itemMapper.delete(new LambdaQueryWrapper<PoOrderItem>()
-                .eq(PoOrderItem::getOrderId, orderId)
-                .eq(PoOrderItem::getDeleted, 0));
+        itemMapper.physicalDeleteByOrderId(orderId);
     }
 
     /**

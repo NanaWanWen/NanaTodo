@@ -3,7 +3,7 @@ package com.yonerp.po.ap.dto;
 import lombok.Data;
 
 /**
- * 应付对账分页查询
+ * 应付对账分页查询（用友式）
  */
 @Data
 public class ApQuery {
@@ -12,7 +12,13 @@ public class ApQuery {
 
     private String matchStatus;
 
+    private String matchType;
+
+    private String diffType;
+
     private Long supplierId;
+
+    private String keyword;
 
     private long pageNo;
 

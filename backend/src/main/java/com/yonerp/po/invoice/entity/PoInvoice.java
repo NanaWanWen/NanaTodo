@@ -40,7 +40,16 @@ public class PoInvoice {
     /** 价税合计 */
     private BigDecimal totalAmount;
 
-    /** 发票状态：UNCHECKED/CHECKED/PAID */
+    /** 发票类型：BLUE 蓝字(正常) / RED 红字(红冲) */
+    private String invoiceType;
+
+    /** 红蓝关联：红字发票指向被红冲的原发票ID */
+    private Long relatedInvoiceId;
+
+    /** 被红冲原发票号（冗余，便于展示） */
+    private String relatedInvoiceNo;
+
+    /** 发票状态：UNCHECKED/CHECKED/PAID/RED_FLUSHED */
     private String invoiceStatus;
 
     private String remark;
