@@ -124,13 +124,13 @@ flowchart LR
 
 汇总待办审批、预警摘要、快捷操作入口，不同角色看到的内容随权限自适应。
 
-> 📷 **截图占位**：`docs/screenshots/workbench.png` —— 工作台首页（管理员视角）
+> 📷 **截图占位**：`assets/workbench.png` —— 工作台首页（管理员视角）
 
 ### 2. 采购订单
 
 主从结构订单（表头 + 多行物料明细），支持草稿/提交/审批状态机、订单详情查看、Excel 导入。
 
-> 📷 **截图占位**：`docs/screenshots/orders.png` —— 采购订单列表 / 新建订单
+> 📷 **截图占位**：`assets/orders.png` —— 采购订单列表 / 新建订单
 
 ### 3. 收货 · 发票 · 付款
 
@@ -138,7 +138,7 @@ flowchart LR
 - **采购发票**：发票登记，支持红冲（负数发票）。
 - **付款单**：付款申请与登记。
 
-> 📷 **截图占位**：`docs/screenshots/receipt-invoice-payment.png` —— 收货/发票/付款三页
+> 📷 **截图占位**：`assets/receipt-invoice-payment.png` —— 收货/发票/付款三页
 
 ### 4. 应付管理（三单匹配）
 
@@ -147,7 +147,7 @@ flowchart LR
 - **差异处理工作台**：匹配差异集中处理。
 - **匹配规则配置**：业务自助配置匹配阈值与规则。
 
-> 📷 **截图占位**：`docs/screenshots/ap-match.png` —— 应付对账 / 匹配规则 / 差异处理
+> 📷 **截图占位**：`assets/ap-match.png` —— 应付对账 / 匹配规则 / 差异处理
 
 ### 5. AI Agent
 
@@ -155,15 +155,15 @@ flowchart LR
 - **预警中心**：SSE 实时推送预警，支持业务域筛选、指派/转办/处理、审计时间线。
 - **预警规则配置**：阈值 / 级别 / 启停自助配置。
 
-> 📷 **截图占位**：`docs/screenshots/agent-chat.png` —— AI 智能对话
-> 📷 **截图占位**：`docs/screenshots/agent-alerts.png` —— 实时预警中心
+> 📷 **截图占位**：`assets/agent-chat.png` —— AI 智能对话
+> 📷 **截图占位**：`assets/agent-alerts.png` —— 实时预警中心
 
 ### 6. 基础数据 & 报表统计
 
 - **基础数据**：供应商、物料、用户与角色维护。
 - **报表统计**：多维度排行 + 趋势图（Recharts）。
 
-> 📷 **截图占位**：`docs/screenshots/reports.png` —— 报表统计页
+> 📷 **截图占位**：`assets/reports.png` —— 报表统计页
 
 ---
 
@@ -268,21 +268,21 @@ YonErp/
 
 ## 🖼️ 截图画廊
 
-> 下面的图片占位等你补充。把截图按文件名放到 `docs/screenshots/` 目录即可自动显示。
+> 下面的图片占位等你补充。把截图按文件名放到**仓库根目录**的 `assets/` 文件夹即可自动显示。
 
 | 截图 | 文件位置 | 说明 |
 |---|---|---|
-| 工作台首页 | `docs/screenshots/workbench.png` | 管理员视角总览 |
-| 采购订单 | `docs/screenshots/orders.png` | 列表 / 新建 / 详情 |
-| 收货发票付款 | `docs/screenshots/receipt-invoice-payment.png` | 三业务页 |
-| 应付三单匹配 | `docs/screenshots/ap-match.png` | 对账 / 规则 / 差异 |
-| AI 智能对话 | `docs/screenshots/agent-chat.png` | 自然语言问数 |
-| 实时预警中心 | `docs/screenshots/agent-alerts.png` | SSE 推送预警 |
-| 报表统计 | `docs/screenshots/reports.png` | 多维排行 + 趋势 |
+| 工作台首页 | `assets/workbench.png` | 管理员视角总览 |
+| 采购订单 | `assets/orders.png` | 列表 / 新建 / 详情 |
+| 收货发票付款 | `assets/receipt-invoice-payment.png` | 三业务页 |
+| 应付三单匹配 | `assets/ap-match.png` | 对账 / 规则 / 差异 |
+| AI 智能对话 | `assets/agent-chat.png` | 自然语言问数 |
+| 实时预警中心 | `assets/agent-alerts.png` | SSE 推送预警 |
+| 报表统计 | `assets/reports.png` | 多维排行 + 趋势 |
 
 <p align="center">
-  <!-- 📷 主视觉大图占位：docs/screenshots/hero.png -->
-  <img src="docs/screenshots/hero.png" width="800" alt="项目主视觉（待补充）" />
+  <!-- 📷 主视觉大图占位：assets/hero.png -->
+  <img src="assets/hero.png" width="800" alt="项目主视觉（待补充）" />
 </p>
 
 ---
