@@ -3,9 +3,7 @@
 > 模拟企业级 ERP 采购业务全流程的**前后端分离练习项目**，对标用友 BIP / YonBIP 设计风格。
 > 覆盖「采购订单 → 收货 → 发票 → 付款 → 应付三单匹配 → 智能预警」完整闭环，并内置 AI Agent 智能问答与实时预警中心。
 
-<p align="center">
-  <img width="1280" alt="YonErp 工作台首页" src="https://github.com/user-attachments/assets/8606c413-8d90-4156-8b8c-46fcdf117d60" />
-</p>
+
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" />
