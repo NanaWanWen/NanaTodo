@@ -3,6 +3,9 @@
 > 模拟企业级 ERP 采购业务全流程的**前后端分离练习项目**，对标用友 BIP / YonBIP 设计风格。
 > 覆盖「采购订单 → 收货 → 发票 → 付款 → 应付三单匹配 → 智能预警」完整闭环，并内置 AI Agent 智能问答与实时预警中心。
 
+<p align="center">
+  <img width="1280" alt="YonErp 工作台首页" src="https://github.com/user-attachments/assets/8606c413-8d90-4156-8b8c-46fcdf117d60" />
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react" />
@@ -265,17 +268,33 @@ YonErp/
 
 ## 🖼️ 截图画廊
 
-> 下面的图片占位等你补充。把截图按文件名放到**仓库根目录**的 `assets/` 文件夹即可自动显示。
+### 🏠 工作台首页
 
-| 截图 | 文件位置 | 说明 |
-|---|---|---|
-| 工作台首页 | `assets/workbench.png` | 管理员视角总览 |
-| 采购订单 | `assets/orders.png` | 列表 / 新建 / 详情 |
-| 收货发票付款 | `assets/receipt-invoice-payment.png` | 三业务页 |
-| 应付三单匹配 | `assets/ap-match.png` | 对账 / 规则 / 差异 |
-| AI 智能对话 | `assets/agent-chat.png` | 自然语言问数 |
-| 实时预警中心 | `assets/agent-alerts.png` | SSE 推送预警 |
-| 报表统计 | `assets/reports.png` | 多维排行 + 趋势 |
+![工作台首页](assets/workbench.png)
+
+### 📋 采购订单
+
+![采购订单](assets/orders.png)
+
+### 📦 收货 · 发票 · 付款
+
+![收货发票付款](assets/receipt-invoice-payment.png)
+
+### 💰 应付三单匹配
+
+![应付三单匹配](assets/ap-match.png)
+
+### 🤖 AI 智能对话
+
+![AI 智能对话](assets/agent-chat.png)
+
+### 🔔 实时预警中心
+
+![实时预警中心](assets/agent-alerts.png)
+
+### 📊 报表统计
+
+![报表统计](assets/reports.png)
 
 <p align="center">
   <!-- 📷 主视觉大图占位：上传 assets/hero.png 后，取消下面 <img> 一行的注释即可显示
