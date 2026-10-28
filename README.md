@@ -281,8 +281,9 @@ YonErp/
 | 报表统计 | `assets/reports.png` | 多维排行 + 趋势 |
 
 <p align="center">
-  <!-- 📷 主视觉大图占位：assets/hero.png -->
-  <img src="assets/hero.png" width="800" alt="项目主视觉（待补充）" />
+  <!-- 📷 主视觉大图占位：上传 assets/hero.png 后，取消下面 <img> 一行的注释即可显示
+  <img src="assets/hero.png" width="800" alt="项目主视觉" />
+  -->
 </p>
 
 ---
